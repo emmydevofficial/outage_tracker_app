@@ -1,0 +1,152 @@
+venv
+# ==============================
+# Project runtime data (this repo)
+# ==============================
+# uploaded TCN attribute files / manual outage entries (pages/11_TCN_Outage_Manager.py)
+tcn_uploads/
+
+# Excel workbooks uploaded as test/reference data for the load-tracking
+# upload pages (feeder/line/transformer) -- these contain real operational
+# grid data and should never be committed.
+*.xlsx
+*.xlsm
+
+# Streamlit secrets (if a .streamlit/secrets.toml is ever added)
+.streamlit/secrets.toml
+
+# ==============================
+# Node / JS (nested tcn-video Remotion project)
+# ==============================
+node_modules/
+dist/
+out/
+.remotion/
+
+# ==============================
+# Byte-compiled / optimized / DLL files
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==============================
+# C extensions
+# ==============================
+*.so
+
+# ==============================
+# Distribution / packaging
+# ==============================
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==============================
+# Virtual environments
+# ==============================
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# ==============================
+# Environment variables
+# ==============================
+.env
+.env.*
+*.env
+
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+log/
+
+# ==============================
+# Unit test / coverage reports
+# ==============================
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ==============================
+# Jupyter Notebook
+# ==============================
+.ipynb_checkpoints
+
+# ==============================
+# PyCharm
+# ==============================
+.idea/
+
+# ==============================
+# VS Code
+# ==============================
+.vscode/
+
+# ==============================
+# Mac / Linux / Windows
+# ==============================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ==============================
+# Database files (common)
+# ==============================
+*.sqlite3
+*.db
+
+# ==============================
+# MyPy
+# ==============================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==============================
+# Pyre
+# ==============================
+.pyre/
+
+# ==============================
+# Ruff
+# ==============================
+.ruff_cache/
+
+# ==============================
+# Poetry
+# ==============================
+poetry.lock
+
+# ==============================
+# Pipenv
+# ==============================
+Pipfile.lock
