@@ -4,6 +4,7 @@ from sqlalchemy import text
 import bcrypt
 
 from .db import get_engine, get_user_role_and_region
+from .activity_log import log_activity
 
 
 def hash_password(password: str) -> str:
@@ -67,6 +68,7 @@ def login():
         st.sidebar.caption(f"👤 {st.session_state.get('username', '')} — {role_label} — {region_label}")
         # optionally provide a logout button
         if st.sidebar.button("Logout"):
+            log_activity("logout")
             st.session_state.logged_in = False
             st.session_state.username = None
             st.session_state.role = None
@@ -89,11 +91,13 @@ def login():
             st.session_state.username = username
             st.session_state.role = role
             st.session_state.region = region
+            log_activity("login")
             try:
                 st.rerun()
             except Exception:
                     pass
         else:
+            log_activity("login_failed", f"attempted username: '{username}'")
             st.sidebar.error("Invalid username or password.")
     st.stop()
 

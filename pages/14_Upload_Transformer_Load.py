@@ -26,6 +26,8 @@ from openpyxl import load_workbook
 from utils.db import upsert_transformer_load, read_transformer_load
 from utils.load_upload import build_merge_fill_map_row, normalize_hour_code, classify_cell
 from utils.regions import normalize_region
+from utils.activity_log import log_activity
+from utils.file_storage import save_uploaded_file
 
 st.set_page_config(page_title="Upload Transformer Load", layout="wide")
 
@@ -155,5 +157,7 @@ if uploaded is not None:
             upsert_transformer_load(df)
             read_transformer_load.clear()
             st.success(f"{len(df):,} transformer load reading(s) for {region} on {reading_date} uploaded successfully.")
+            save_uploaded_file(uploaded, "Upload Transformer Load", region)
+            log_activity("upload_transformer_load", f"Uploaded '{uploaded.name}' — {len(df):,} reading(s) for {region} on {reading_date}")
         except Exception as e:
             st.error(f"Error inserting records: {e}")

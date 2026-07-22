@@ -28,6 +28,7 @@ from utils.db import (
     read_line_load,
     read_transformer_load,
 )
+from utils.activity_log import log_activity
 
 login()
 
@@ -43,7 +44,7 @@ def _current_username() -> str:
     return st.session_state.get("username", "")
 
 
-def render_delete_section(label: str, table_name: str, delete_fn, cache_clear_fn, key_prefix: str):
+def render_delete_section(label: str, table_name: str, delete_fn, cache_clear_fn, key_prefix: str, action_name: str):
     st.subheader(f"🗑️ Delete {label} by Date")
     if is_super_admin():
         st.markdown(
@@ -112,6 +113,11 @@ def render_delete_section(label: str, table_name: str, delete_fn, cache_clear_fn
                     st.warning(f"No {label} records found for **{start_date} to {end_date}**{scope_note}. Nothing was deleted.")
                 else:
                     st.success(f"✅ Successfully deleted **{rows_deleted}** {label} record(s) for **{start_date} to {end_date}**{scope_note}.")
+                    log_activity(
+                        action_name,
+                        f"Deleted {rows_deleted} row(s) for {start_date} to {end_date}"
+                        + (f" ({scope_region})" if scope_region else " (all regions)"),
+                    )
                     cache_clear_fn()
             except Exception as exc:
                 st.error(f"Database error: {exc}")
@@ -120,11 +126,14 @@ def render_delete_section(label: str, table_name: str, delete_fn, cache_clear_fn
 
 
 render_delete_section(
-    "Feeder Load", "feeder_33kv_load", delete_feeder_load_by_date, read_feeder_load.clear, "feeder_load_del"
+    "Feeder Load", "feeder_33kv_load", delete_feeder_load_by_date, read_feeder_load.clear,
+    "feeder_load_del", "delete_feeder_load",
 )
 render_delete_section(
-    "Line Load", "line_load", delete_line_load_by_date, read_line_load.clear, "line_load_del"
+    "Line Load", "line_load", delete_line_load_by_date, read_line_load.clear,
+    "line_load_del", "delete_line_load",
 )
 render_delete_section(
-    "Transformer Load", "transformer_load", delete_transformer_load_by_date, read_transformer_load.clear, "transformer_load_del"
+    "Transformer Load", "transformer_load", delete_transformer_load_by_date, read_transformer_load.clear,
+    "transformer_load_del", "delete_transformer_load",
 )

@@ -11,6 +11,8 @@ from utils.auth import login, is_super_admin, current_region
 import pandas as pd
 import numpy as np
 from utils.db import insert_outages, insert_outages_from_csv
+from utils.activity_log import log_activity
+from utils.file_storage import save_uploaded_file
 
 login()
 
@@ -215,6 +217,13 @@ if upload is not None:
             else:
                 insert_outages(valid_df)
             st.success(f"{len(valid_df)} outage record(s) successfully inserted into database")
+            upload_region = None if is_super_admin() else current_region()
+            save_uploaded_file(upload, "Upload Outages", upload_region)
+            log_activity(
+                "upload_outages",
+                f"Uploaded '{upload.name}' — {len(valid_df)} row(s) inserted"
+                + (f" ({upload_region})" if upload_region else ""),
+            )
         except Exception as e:
             st.error(f"Error inserting records: {e}")
         finally:

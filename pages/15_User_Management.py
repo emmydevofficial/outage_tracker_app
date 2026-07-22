@@ -16,6 +16,7 @@ require_super_admin()
 import pandas as pd
 from utils.db import list_users, create_user, update_user, delete_user, count_super_admins
 from utils.regions import REGIONS
+from utils.activity_log import log_activity
 
 st.set_page_config(page_title="User Management", layout="wide")
 
@@ -69,6 +70,7 @@ with st.form("create_user_form", clear_on_submit=True):
                 create_user(new_username, hash_password(new_password), new_role, new_region)
                 st.success(f"User '{new_username}' created as {ROLE_LABELS[new_role]}"
                            + (f" for {new_region}." if new_region else "."))
+                log_activity("create_user", f"Created '{new_username}' as {ROLE_LABELS[new_role]}" + (f" ({new_region})" if new_region else ""))
                 _refresh()
             except Exception as e:
                 st.error(f"Could not create user: {e}")
@@ -117,10 +119,14 @@ else:
                         region_explicit=True, password_hash=hash_password(new_pw),
                     )
                     st.success(f"'{edit_username}' updated (password reset).")
+                    log_activity("update_user", f"Updated '{edit_username}' -> {ROLE_LABELS[edit_role]}"
+                                 + (f" ({edit_region})" if edit_region else "") + " + password reset")
                     _refresh()
             else:
                 update_user(edit_username, role=edit_role, region=edit_region, region_explicit=True)
                 st.success(f"'{edit_username}' updated.")
+                log_activity("update_user", f"Updated '{edit_username}' -> {ROLE_LABELS[edit_role]}"
+                             + (f" ({edit_region})" if edit_region else ""))
                 _refresh()
 
 st.divider()
@@ -142,4 +148,5 @@ else:
         else:
             delete_user(del_username)
             st.success(f"'{del_username}' deleted.")
+            log_activity("delete_user", f"Deleted '{del_username}'")
             _refresh()

@@ -5,6 +5,9 @@ venv
 # uploaded TCN attribute files / manual outage entries (pages/11_TCN_Outage_Manager.py)
 tcn_uploads/
 
+# uploaded-files audit directory (pages/17_Activity_Log.py / utils/file_storage.py)
+uploaded_files/
+
 # Excel workbooks uploaded as test/reference data for the load-tracking
 # upload pages (feeder/line/transformer) -- these contain real operational
 # grid data and should never be committed.

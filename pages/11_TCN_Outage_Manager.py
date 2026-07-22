@@ -10,7 +10,9 @@ instead of the original app's local users.json file.
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region, scoped_regions
+from utils.auth import login, filter_to_user_region, scoped_regions, is_super_admin, current_region
+from utils.activity_log import log_activity
+from utils.file_storage import save_uploaded_file
 
 login()
 
@@ -1019,6 +1021,7 @@ def show_outage_entry():
                 combined.to_csv(manual_file, index=False)
                 load_all_data.clear()
                 st.success(f"Outage report submitted: {equip_full} at {substation} ({region} / {sub_acc})")
+                log_activity("manual_outage_entry", f"{equip_full} at {substation} ({region} / {sub_acc})")
                 st.rerun()
 
 
@@ -1083,12 +1086,18 @@ def show_upload():
 
         if st.button("Save Uploaded Files", type="primary"):
             saved = []
+            upload_region = None if is_super_admin() else current_region()
             for uf in uploaded_files:
                 dest = UPLOADS_DIR / uf.name
                 dest.write_bytes(uf.getvalue())
                 saved.append(uf.name)
+                # exempt_from_expiry=True: this folder is also this page's live
+                # data source (load_all_data() reads it back), so these files
+                # must NOT be swept by the 90-day purge like other uploads are.
+                save_uploaded_file(uf, "TCN Outage Manager", upload_region, exempt_from_expiry=True)
             load_all_data.clear()
             st.success(f"Saved {len(saved)} file(s): {', '.join(saved)}")
+            log_activity("tcn_file_upload", f"Saved {len(saved)} file(s): {', '.join(saved)}")
             st.rerun()
 
     st.divider()

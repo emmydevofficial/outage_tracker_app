@@ -34,6 +34,7 @@ st.markdown(
     14. Upload Transformer Load (transformer hourly load tracking upload)
     15. User Management (Super Admin only)
     16. Load Data Management (delete feeder/line/transformer load by date and region)
+    17. Activity Log (Super Admin only: audit trail + uploaded files directory)
 
     The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
     `db.py` and `pdf_generator.py`.

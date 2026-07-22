@@ -17,6 +17,7 @@ user is asked to identify themselves inline.
 
 import streamlit as st
 from utils.auth import login, is_super_admin, current_region
+from utils.activity_log import log_activity
 from datetime import date, timedelta
 
 from utils.db import (
@@ -117,6 +118,11 @@ if submitted_delete:
                     f"for date **{start_date} to {end_date}**"
                     + (f" in {scope_region}" if scope_region else "") + "."
                 )
+                log_activity(
+                    "delete_outages",
+                    f"Deleted {rows_deleted} row(s) for {start_date} to {end_date}"
+                    + (f" ({scope_region})" if scope_region else " (all regions)"),
+                )
                 # clear cached query results so downstream pages refresh
                 read_outages.clear()
         except Exception as exc:
@@ -185,6 +191,7 @@ if is_super_admin():
                     st.success(
                         "✅ The outages table has been truncated and the ID sequence reset."
                     )
+                    log_activity("truncate_outages", "Truncated the entire outages table")
                     read_outages.clear()
                 except Exception as exc:
                     st.error(f"Database error: {exc}")

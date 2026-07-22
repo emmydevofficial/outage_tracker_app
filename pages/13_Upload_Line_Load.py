@@ -25,6 +25,8 @@ from openpyxl import load_workbook
 from utils.db import upsert_line_load, read_line_load
 from utils.load_upload import build_merge_fill_map, normalize_time_header, classify_cell
 from utils.regions import normalize_region
+from utils.activity_log import log_activity
+from utils.file_storage import save_uploaded_file
 
 st.set_page_config(page_title="Upload Line Load", layout="wide")
 
@@ -146,5 +148,7 @@ if uploaded is not None:
             upsert_line_load(df)
             read_line_load.clear()
             st.success(f"{len(df):,} line load reading(s) for {region} on {reading_date} uploaded successfully.")
+            save_uploaded_file(uploaded, "Upload Line Load", region)
+            log_activity("upload_line_load", f"Uploaded '{uploaded.name}' — {len(df):,} reading(s) for {region} on {reading_date}")
         except Exception as e:
             st.error(f"Error inserting records: {e}")
