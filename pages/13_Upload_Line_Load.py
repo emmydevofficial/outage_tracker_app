@@ -16,7 +16,7 @@ Sheet layout expected:
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, is_super_admin, current_region
 
 login()
 
@@ -24,6 +24,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from utils.db import upsert_line_load, read_line_load
 from utils.load_upload import build_merge_fill_map, normalize_time_header, classify_cell
+from utils.regions import normalize_region
 
 st.set_page_config(page_title="Upload Line Load", layout="wide")
 
@@ -58,7 +59,11 @@ if uploaded is not None:
     if not region or not str(region).strip():
         st.error("Could not find a region name in cell A1 of the uploaded sheet.")
         st.stop()
-    region = str(region).strip()
+    region = normalize_region(region)
+
+    if not is_super_admin() and region.strip().upper() != str(current_region()).strip().upper():
+        st.error(f"This file is for **{region}**, but you only have upload access to **{current_region()}**.")
+        st.stop()
 
     hour_headers = [
         normalize_time_header(ws.cell(row=2, column=col).value)

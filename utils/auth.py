@@ -1,13 +1,18 @@
+import pandas as pd
 import streamlit as st
 from sqlalchemy import text
 import bcrypt
 
-from .db import get_engine
+from .db import get_engine, get_user_role_and_region
 
 
-def _hash_password(password: str) -> str:
+def hash_password(password: str) -> str:
     # bcrypt operates on bytes, result is bytes; decode to utf-8 for storage
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+# kept for any existing internal callers of the old private name
+_hash_password = hash_password
 
 
 def _verify_password(password: str, hashed: str) -> bool:
@@ -53,12 +58,19 @@ def login():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
         st.session_state.username = None
+        st.session_state.role = None
+        st.session_state.region = None
 
     if st.session_state.logged_in:
+        region_label = st.session_state.get("region") or "All Regions"
+        role_label = "Super Admin" if st.session_state.get("role") == "super_admin" else "Regional User"
+        st.sidebar.caption(f"👤 {st.session_state.get('username', '')} — {role_label} — {region_label}")
         # optionally provide a logout button
         if st.sidebar.button("Logout"):
             st.session_state.logged_in = False
             st.session_state.username = None
+            st.session_state.role = None
+            st.session_state.region = None
             # newer Streamlit versions use rerun()
             try:
                 st.rerun()
@@ -72,10 +84,67 @@ def login():
 
     if st.sidebar.button("Login"):
         if authenticate(username, password):
+            role, region = get_user_role_and_region(username)
             st.session_state.logged_in = True
             st.session_state.username = username
+            st.session_state.role = role
+            st.session_state.region = region
             try:
                 st.rerun()
             except Exception:
                     pass
+        else:
+            st.sidebar.error("Invalid username or password.")
     st.stop()
+
+
+# -----------------------------
+# ACCESS CONTROL HELPERS
+# -----------------------------
+
+def is_super_admin() -> bool:
+    return st.session_state.get("role") == "super_admin"
+
+
+def current_region() -> str | None:
+    """The logged-in user's assigned region, or None for a super_admin."""
+    return st.session_state.get("region")
+
+
+def require_super_admin():
+    """Stop the page with an access-denied message unless the user is a super_admin."""
+    if not is_super_admin():
+        st.error("⛔ Access denied — this page is restricted to Super Admins.")
+        st.stop()
+
+
+def scoped_regions(all_regions) -> list:
+    """Region options to offer in a selectbox/multiselect for the current user.
+
+    Super admins get the full list passed in. A regional user only ever gets
+    their own region (intersected with what's actually available), so they
+    can't pick another region even if the dropdown code doesn't otherwise
+    know about access control.
+    """
+    all_regions = list(all_regions)
+    if is_super_admin():
+        return all_regions
+    region = current_region()
+    return [r for r in all_regions if str(r).strip().upper() == str(region).strip().upper()] or ([region] if region else [])
+
+
+def filter_to_user_region(df: pd.DataFrame, region_col: str = "region") -> pd.DataFrame:
+    """Filter a dataframe to the current user's region; no-op for super_admin.
+
+    Comparison is case-insensitive (source data has inconsistent casing across
+    tables) and never mutates the input in place, so it's safe to call on a
+    dataframe returned from an @st.cache_data function. Regional users never
+    see rows with a null/blank region -- deny by default.
+    """
+    if is_super_admin():
+        return df
+    region = current_region()
+    if not region or region_col not in df.columns:
+        return df.iloc[0:0]
+    mask = df[region_col].astype(str).str.strip().str.upper() == region.strip().upper()
+    return df[mask]

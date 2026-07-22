@@ -4,7 +4,7 @@ Feeder-level analysis and top feeders
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
@@ -21,6 +21,7 @@ start_default = today - timedelta(days=7)
 start_date, end_date = st.date_input("Select date range", value=[start_default, today], key="feeder_dates")
 
 feeder_df = read_feeder_load(str(start_date), str(end_date))
+feeder_df = filter_to_user_region(feeder_df)
 if feeder_df.empty:
     st.warning("No data for this range")
     st.stop()

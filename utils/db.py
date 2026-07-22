@@ -311,12 +311,90 @@ def get_user_role(username: str) -> str | None:
     return row[0] if row else None
 
 
+def get_user_role_and_region(username: str) -> tuple[str | None, str | None]:
+    """Return (role, region) for the given username in a single query.
+
+    region is None for super_admin (and if the user isn't found).
+    """
+    engine = get_engine()
+    query = text("SELECT user_role, region FROM users WHERE username = :u")
+    with engine.connect() as conn:
+        row = conn.execute(query, {"u": username}).fetchone()
+    return (row[0], row[1]) if row else (None, None)
+
+
+# -----------------------------
+# USER MANAGEMENT (Super Admin)
+# -----------------------------
+
+def list_users() -> pd.DataFrame:
+    """Return every user with their role, region, and creation date."""
+    engine = get_engine()
+    query = text("""
+        SELECT username, user_role, region, created_at
+        FROM users
+        ORDER BY created_at
+    """)
+    return pd.read_sql_query(query, engine)
+
+
+def count_super_admins() -> int:
+    engine = get_engine()
+    with engine.connect() as conn:
+        return conn.execute(text("SELECT count(*) FROM users WHERE user_role = 'super_admin'")).scalar()
+
+
+def create_user(username: str, password_hash: str, role: str, region: str | None) -> None:
+    """Insert a new user. Raises on duplicate username (DB primary key)."""
+    engine = get_engine()
+    query = text("""
+        INSERT INTO users (username, password_hash, user_role, region)
+        VALUES (:u, :p, :r, :region)
+    """)
+    with engine.begin() as conn:
+        conn.execute(query, {"u": username, "p": password_hash, "r": role, "region": region})
+
+
+def update_user(username: str, *, role: str | None = None, region: str | None = None,
+                 password_hash: str | None = None, region_explicit: bool = False) -> None:
+    """Update an existing user's role/region/password.
+
+    role/password_hash are only applied when provided. region is only applied
+    when region_explicit=True (so callers can distinguish "leave region
+    unchanged" from "set region to NULL", which matters when switching a user
+    to super_admin).
+    """
+    engine = get_engine()
+    sets = []
+    params = {"u": username}
+    if role is not None:
+        sets.append("user_role = :role")
+        params["role"] = role
+    if region_explicit:
+        sets.append("region = :region")
+        params["region"] = region
+    if password_hash is not None:
+        sets.append("password_hash = :password_hash")
+        params["password_hash"] = password_hash
+    if not sets:
+        return
+    query = text(f"UPDATE users SET {', '.join(sets)} WHERE username = :u")
+    with engine.begin() as conn:
+        conn.execute(query, params)
+
+
+def delete_user(username: str) -> None:
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM users WHERE username = :u"), {"u": username})
+
+
 # -----------------------------
 # DELETE OPERATIONS
 # -----------------------------
 
-def delete_outages_by_date(start_date: str, end_date: str) -> int:
-    """Delete all outage records where date_off equals the given date.
+def delete_outages_by_date(start_date: str, end_date: str, region: str | None = None) -> int:
+    """Delete outage records where date_off falls in the given range.
 
     Parameters
     ----------
@@ -324,6 +402,11 @@ def delete_outages_by_date(start_date: str, end_date: str) -> int:
         Date string in 'YYYY-MM-DD' format.
     end_date: str
         Date string in 'YYYY-MM-DD' format.
+    region: str | None
+        When provided, only rows matching this region (case-insensitive) are
+        deleted -- used to confine a regional user's delete to their own
+        region. None (the default) deletes across all regions, unchanged
+        from prior behavior.
 
     Returns
     -------
@@ -331,10 +414,53 @@ def delete_outages_by_date(start_date: str, end_date: str) -> int:
         Number of rows deleted.
     """
     engine = get_engine()
-    query = text("DELETE FROM outages WHERE date_off BETWEEN :start_date AND :end_date")
+    sql = "DELETE FROM outages WHERE date_off BETWEEN :start_date AND :end_date"
+    params = {"start_date": start_date, "end_date": end_date}
+    if region:
+        sql += " AND region ILIKE :region"
+        params["region"] = region
     with engine.begin() as conn:
-        result = conn.execute(query, {"start_date": start_date, "end_date": end_date})
+        result = conn.execute(text(sql), params)
         return result.rowcount
+
+
+def _delete_load_by_date_region(table: str, start_date: str, end_date: str, region: str | None) -> int:
+    """Shared implementation for the three hourly load tables below.
+
+    All three (feeder_33kv_load, line_load, transformer_load) share the same
+    reading_date/region column names, so a single parameterized DELETE covers
+    all of them -- `table` is never user-supplied (always one of the three
+    literals passed by the wrapper functions), so it's safe to interpolate
+    directly rather than bind as a query parameter.
+    """
+    engine = get_engine()
+    sql = f"DELETE FROM {table} WHERE reading_date BETWEEN :start_date AND :end_date"
+    params = {"start_date": start_date, "end_date": end_date}
+    if region:
+        sql += " AND region ILIKE :region"
+        params["region"] = region
+    with engine.begin() as conn:
+        result = conn.execute(text(sql), params)
+        return result.rowcount
+
+
+def delete_feeder_load_by_date(start_date: str, end_date: str, region: str | None = None) -> int:
+    """Delete feeder_33kv_load rows in the given reading_date range.
+
+    region: None deletes across all regions (Super Admin "All Regions");
+    otherwise only rows matching that region (case-insensitive) are removed.
+    """
+    return _delete_load_by_date_region("feeder_33kv_load", start_date, end_date, region)
+
+
+def delete_line_load_by_date(start_date: str, end_date: str, region: str | None = None) -> int:
+    """Delete line_load rows in the given reading_date range (see delete_feeder_load_by_date)."""
+    return _delete_load_by_date_region("line_load", start_date, end_date, region)
+
+
+def delete_transformer_load_by_date(start_date: str, end_date: str, region: str | None = None) -> int:
+    """Delete transformer_load rows in the given reading_date range (see delete_feeder_load_by_date)."""
+    return _delete_load_by_date_region("transformer_load", start_date, end_date, region)
 
 
 def truncate_outages() -> None:

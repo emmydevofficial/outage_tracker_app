@@ -5,7 +5,7 @@ This sample assumes a 'customers' column is NOT available, so it shows station-l
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages, read_tcn_sla_compliance
 from datetime import date, timedelta
@@ -22,6 +22,7 @@ start_default = today - timedelta(days=30)
 start_date, end_date = st.date_input("Select date range", value=[start_default, today], key="reliability_dates")
 
 out_df = read_outages(str(start_date), str(end_date))
+out_df = filter_to_user_region(out_df)
 if out_df.empty:
     st.warning("No outage records for this range")
     st.stop()

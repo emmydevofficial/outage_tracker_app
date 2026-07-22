@@ -3,10 +3,12 @@
 
 Outage management page — provides two privileged delete operations:
 
-  1. Delete by date   — available to any authenticated user (reader, analyst, admin)
-                        who can supply their own valid password.
-  2. Truncate table   — admin-only; requires the acting user to be an admin AND
-                        supply the correct password.
+  1. Delete by date   — available to any authenticated user, scoped to their own
+                        region for regional users (all regions for Super Admin).
+                        Requires the acting user's own valid password.
+  2. Truncate table   — Super Admin only; the section isn't even shown to
+                        regional users, and the acting user's role is re-checked
+                        against the DB before the truncate runs.
 
 The page also re-uses the existing session_state login stored by the app so
 that the logged-in username is pre-filled.  If no login state is present the
@@ -14,7 +16,7 @@ user is asked to identify themselves inline.
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, is_super_admin, current_region
 from datetime import date, timedelta
 
 from utils.db import (
@@ -44,10 +46,16 @@ def _current_username() -> str:
 # SECTION 1 — Delete outages by date_off
 # ══════════════════════════════════════════════════════════════════════════════
 st.subheader("🗑️ Delete Outages by Date")
-st.markdown(
-    "Removes **all** outage rows whose `date_off` matches the chosen date. "
-    "Your password is required to confirm the operation."
-)
+if is_super_admin():
+    st.markdown(
+        "Removes **all** outage rows whose `date_off` matches the chosen date, "
+        "across every region. Your password is required to confirm the operation."
+    )
+else:
+    st.markdown(
+        f"Removes outage rows whose `date_off` matches the chosen date, **for {current_region()} only**. "
+        "Your password is required to confirm the operation."
+    )
 
 with st.form("form_delete_by_date", border=True):
     col_date, col_user, col_pwd = st.columns([2, 2, 2])
@@ -96,15 +104,18 @@ if submitted_delete:
         start_date_str = start_date.strftime("%Y-%m-%d")
         end_date_str = end_date.strftime("%Y-%m-%d")
         try:
-            rows_deleted = delete_outages_by_date(start_date, end_date)
+            scope_region = None if is_super_admin() else current_region()
+            rows_deleted = delete_outages_by_date(start_date, end_date, region=scope_region)
             if rows_deleted == 0:
                 st.warning(
-                    f"No outage records found for **{start_date} to {end_date}**. Nothing was deleted."
+                    f"No outage records found for **{start_date} to {end_date}**"
+                    + (f" in {scope_region}" if scope_region else "") + ". Nothing was deleted."
                 )
             else:
                 st.success(
                     f"✅ Successfully deleted **{rows_deleted}** outage record(s) "
-                    f"for date **{start_date} to {end_date}**."
+                    f"for date **{start_date} to {end_date}**"
+                    + (f" in {scope_region}" if scope_region else "") + "."
                 )
                 # clear cached query results so downstream pages refresh
                 read_outages.clear()
@@ -114,65 +125,66 @@ if submitted_delete:
 st.markdown("---")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 2 — Truncate entire outages table (admin only)
+# SECTION 2 — Truncate entire outages table (Super Admin only)
 # ══════════════════════════════════════════════════════════════════════════════
-st.subheader("💣 Truncate All Outage Records")
-st.markdown(
-    "> ⚠️ **Danger zone.** This will permanently erase **every row** in the "
-    "`outages` table and reset the auto-increment ID to 1. "
-    "**This action cannot be undone.**  "
-    "Only users with the **admin** role may perform this operation."
-)
-
-with st.form("form_truncate_outages", border=True):
-    trunc_col_user, trunc_col_pwd = st.columns([2, 2])
-
-    with trunc_col_user:
-        trunc_username = st.text_input(
-            "Admin username",
-            value=_current_username(),
-            key="trunc_username",
-        )
-
-    with trunc_col_pwd:
-        trunc_password = st.text_input(
-            "Admin password",
-            type="password",
-            key="trunc_password",
-        )
-
-    confirm_check = st.checkbox(
-        "I understand this will delete ALL outage records and cannot be reversed.",
-        key="trunc_confirm_check",
+if is_super_admin():
+    st.subheader("💣 Truncate All Outage Records")
+    st.markdown(
+        "> ⚠️ **Danger zone.** This will permanently erase **every row** in the "
+        "`outages` table (every region) and reset the auto-increment ID to 1. "
+        "**This action cannot be undone.**  "
+        "Only **Super Admins** may perform this operation."
     )
 
-    submitted_truncate = st.form_submit_button(
-        "💣 Truncate Outages Table",
-        type="primary",
-        use_container_width=False,
-    )
+    with st.form("form_truncate_outages", border=True):
+        trunc_col_user, trunc_col_pwd = st.columns([2, 2])
 
-if submitted_truncate:
-    # --- validation ---
-    if not trunc_username or not trunc_password:
-        st.error("Username and password are required.")
-    elif not confirm_check:
-        st.error("You must tick the confirmation checkbox before proceeding.")
-    elif not verify_user_password(trunc_username, trunc_password):
-        st.error("❌ Invalid credentials. Operation aborted.")
-    else:
-        role = get_user_role(trunc_username)
-        if role != "admin":
-            st.error(
-                f"❌ Access denied. The user **{trunc_username}** has role "
-                f"**{role or 'unknown'}**. Only **admin** users can truncate the table."
+        with trunc_col_user:
+            trunc_username = st.text_input(
+                "Admin username",
+                value=_current_username(),
+                key="trunc_username",
             )
+
+        with trunc_col_pwd:
+            trunc_password = st.text_input(
+                "Admin password",
+                type="password",
+                key="trunc_password",
+            )
+
+        confirm_check = st.checkbox(
+            "I understand this will delete ALL outage records and cannot be reversed.",
+            key="trunc_confirm_check",
+        )
+
+        submitted_truncate = st.form_submit_button(
+            "💣 Truncate Outages Table",
+            type="primary",
+            use_container_width=False,
+        )
+
+    if submitted_truncate:
+        # --- validation ---
+        if not trunc_username or not trunc_password:
+            st.error("Username and password are required.")
+        elif not confirm_check:
+            st.error("You must tick the confirmation checkbox before proceeding.")
+        elif not verify_user_password(trunc_username, trunc_password):
+            st.error("❌ Invalid credentials. Operation aborted.")
         else:
-            try:
-                truncate_outages()
-                st.success(
-                    "✅ The outages table has been truncated and the ID sequence reset."
+            role = get_user_role(trunc_username)
+            if role != "super_admin":
+                st.error(
+                    f"❌ Access denied. The user **{trunc_username}** has role "
+                    f"**{role or 'unknown'}**. Only **Super Admin** users can truncate the table."
                 )
-                read_outages.clear()
-            except Exception as exc:
-                st.error(f"Database error: {exc}")
+            else:
+                try:
+                    truncate_outages()
+                    st.success(
+                        "✅ The outages table has been truncated and the ID sequence reset."
+                    )
+                    read_outages.clear()
+                except Exception as exc:
+                    st.error(f"Database error: {exc}")

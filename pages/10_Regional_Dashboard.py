@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages
 from datetime import date, timedelta
@@ -24,6 +24,7 @@ start_date, end_date = st.date_input(
 )
 
 out_df = read_outages(str(start_date), str(end_date))
+out_df = filter_to_user_region(out_df)
 if out_df.empty:
     st.warning("No outage records found for the selected date range.")
     st.stop()

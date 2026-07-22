@@ -7,7 +7,7 @@ requirements (hour/minute columns that will be collapsed).
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, is_super_admin, current_region
 import pandas as pd
 import numpy as np
 from utils.db import insert_outages, insert_outages_from_csv
@@ -171,6 +171,20 @@ if upload is not None:
             "flagged_rows.csv",
             "text/csv",
         )
+
+    # ── Region enforcement ───────────────────────────────────────────────────
+    # A regional user may only ever insert rows for their own region. Rows for
+    # other regions are dropped (not just blocked) so a mixed-region national
+    # file can still be used -- only the rows outside their access are excluded.
+    if not is_super_admin():
+        user_region = current_region()
+        region_mismatch = valid_df["region"].astype(str).str.strip().str.upper() != str(user_region).strip().upper()
+        if region_mismatch.any():
+            st.warning(
+                f"⚠️ {region_mismatch.sum()} row(s) for other regions were skipped — "
+                f"you only have upload access to **{user_region}**."
+            )
+        valid_df = valid_df[~region_mismatch].reset_index(drop=True)
 
     st.subheader("Preview of valid records")
     st.dataframe(valid_df.head())

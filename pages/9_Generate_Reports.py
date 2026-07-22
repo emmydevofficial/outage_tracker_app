@@ -5,7 +5,7 @@ Combines data from Outage Analytics (page 5) and Reliability KPI Report (page 6)
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -43,6 +43,9 @@ with col1:
 with st.spinner("Loading outage data..."):
     out_df = read_outages(str(start_date), str(end_date))
     out_with_date_off_df = read_outages_using_date_off(str(start_date), str(end_date))
+
+out_df = filter_to_user_region(out_df)
+out_with_date_off_df = filter_to_user_region(out_with_date_off_df)
 
 if out_df.empty:
     st.warning("No outage records for this range")

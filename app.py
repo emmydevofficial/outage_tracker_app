@@ -32,6 +32,8 @@ st.markdown(
     12. Upload Feeder Load (33kV feeder hourly load tracking upload)
     13. Upload Line Load (330/132kV line hourly load tracking upload)
     14. Upload Transformer Load (transformer hourly load tracking upload)
+    15. User Management (Super Admin only)
+    16. Load Data Management (delete feeder/line/transformer load by date and region)
 
     The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
     `db.py` and `pdf_generator.py`.

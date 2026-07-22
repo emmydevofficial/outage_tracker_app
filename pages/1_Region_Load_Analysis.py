@@ -5,7 +5,7 @@ Region-level KPIs and charts
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
@@ -31,6 +31,7 @@ if start_date > end_date:
 # Fetch data
 with st.spinner("Loading feeder data..."):
     feeder_df = read_feeder_load(str(start_date), str(end_date))
+feeder_df = filter_to_user_region(feeder_df)
 
 if feeder_df.empty:
     st.warning("No feeder load data for this date range")

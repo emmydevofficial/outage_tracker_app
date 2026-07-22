@@ -10,7 +10,7 @@ instead of the original app's local users.json file.
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region, scoped_regions
 
 login()
 
@@ -925,7 +925,7 @@ def show_outage_entry():
     # --- Cascading selectors OUTSIDE the form so they trigger reruns ---
     st.subheader("Location")
     loc1, loc2 = st.columns(2)
-    region = loc1.selectbox("Region", options=sorted(SUBSTATION_EQUIPMENT.keys()), key="entry_region")
+    region = loc1.selectbox("Region", options=scoped_regions(sorted(SUBSTATION_EQUIPMENT.keys())), key="entry_region")
 
     subregions = sorted(SUBSTATION_EQUIPMENT.get(region, {}).keys())
     sub_acc = loc2.selectbox("SubRegion / ACC", options=subregions, key="entry_sub")
@@ -1322,6 +1322,7 @@ def main():
     """, unsafe_allow_html=True)
 
     df = load_all_data()
+    df = filter_to_user_region(df, region_col="Region")
 
     tab_names = [
         "Dashboard", "Records", "Region Analysis", "Generate Report",

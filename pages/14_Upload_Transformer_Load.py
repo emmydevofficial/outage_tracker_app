@@ -17,7 +17,7 @@ Sheet layout expected:
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, is_super_admin, current_region
 
 login()
 
@@ -25,6 +25,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from utils.db import upsert_transformer_load, read_transformer_load
 from utils.load_upload import build_merge_fill_map_row, normalize_hour_code, classify_cell
+from utils.regions import normalize_region
 
 st.set_page_config(page_title="Upload Transformer Load", layout="wide")
 
@@ -58,7 +59,11 @@ if uploaded is not None:
     if not region or not str(region).strip():
         st.error("Could not find a region name in cell A1 of the uploaded sheet.")
         st.stop()
-    region = str(region).strip()
+    region = normalize_region(region)
+
+    if not is_super_admin() and region.strip().upper() != str(current_region()).strip().upper():
+        st.error(f"This file is for **{region}**, but you only have upload access to **{current_region()}**.")
+        st.stop()
 
     if ws.max_row < DATA_END_ROW:
         st.error(f"Expected hourly rows through row {DATA_END_ROW} (A6:A{DATA_END_ROW}); sheet only has {ws.max_row} rows.")

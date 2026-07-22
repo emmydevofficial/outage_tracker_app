@@ -4,7 +4,7 @@ Outage analysis page: frequency, duration, cause analysis and simple SAIDI/SAIFI
 """
 
 import streamlit as st
-from utils.auth import login
+from utils.auth import login, filter_to_user_region
 import pandas as pd
 import plotly.express as px
 from utils.db import read_outages
@@ -21,6 +21,7 @@ start_default = today - timedelta(days=30)
 start_date, end_date = st.date_input("Select date range", value=[start_default, today], key="outage_dates")
 
 out_df = read_outages(str(start_date), str(end_date))
+out_df = filter_to_user_region(out_df)
 if out_df.empty:
     st.warning("No outage records for this range")
     st.stop()
