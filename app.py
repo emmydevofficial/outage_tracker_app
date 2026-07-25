@@ -9,13 +9,15 @@ Run with: streamlit run app.py
 
 import streamlit as st
 from utils.auth import login
+from utils.branding import inject_css, page_header
 
 # require login before doing anything else
 login()
 
-st.set_page_config(page_title="Power Ops Dashboard", layout="wide")
+st.set_page_config(page_title="Power Ops Dashboard", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Load & Outage Analytics", "33kV Feeder Network · Load · Outages · Analytics")
 
-st.title("Power Operations Dashboard — Load & Outage Analytics")
 st.markdown(
     """
     This Streamlit app contains multiple pages (use the left sidebar Pages menu).
@@ -28,7 +30,6 @@ st.markdown(
     5. Outage Analytics
     6. Reliability KPI Report
     10. Regional Dashboard
-    11. TCN Outage Manager (file-based attribute records, manual entry, network hierarchy)
     12. Upload Feeder Load (33kV feeder hourly load tracking upload)
     13. Upload Line Load (330/132kV line hourly load tracking upload)
     14. Upload Transformer Load (transformer hourly load tracking upload)

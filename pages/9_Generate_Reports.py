@@ -11,6 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from utils.db import read_outages, read_tcn_sla_compliance, read_outages_using_date_off
 from utils.report_generator import generate_word_report, generate_pdf_report_with_tables
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS
 from datetime import date, timedelta
 import os
 import tempfile
@@ -18,9 +19,9 @@ import calendar
 
 login()
 
-st.set_page_config(page_title="Generate Reports", layout="wide")
-
-st.title("📊 Generate Outage Reports by Region")
+st.set_page_config(page_title="Generate Reports", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Generate Outage Reports by Region", "33kV Feeder Network · Reporting")
 st.markdown("Generate comprehensive outage analysis reports in MS-Word and PDF formats.")
 
 # ===========================
@@ -120,12 +121,13 @@ for region in selected_regions:
     }
     
     # Display metrics
-    metric_cols = st.columns(5)
-    metric_cols[0].metric("Total Outages", num_outages)
-    metric_cols[1].metric("Total Minutes", f"{total_outage_minutes:.0f}")
-    metric_cols[2].metric("Total Hours", f"{total_outage_minutes / 60:.1f}")
-    metric_cols[3].metric("Avg Duration (min)", f"{avg_duration:.1f}")
-    metric_cols[4].metric("Total Load Loss (MWh)", f"{total_load_loss_mwh:.2f}")
+    kpi_grid([
+        kpi_card("Outages", f"{num_outages}", "", "alert", "#c81e28"),
+        kpi_card("Total Duration", f"{total_outage_minutes:.0f}", "min", "clock", "#1e3a7a"),
+        kpi_card("Total Duration", f"{total_outage_minutes / 60:.1f}", "hrs", "clock", "#1F6C9F"),
+        kpi_card("Avg Duration", f"{avg_duration:.1f}", "min", "clock", "#956400"),
+        kpi_card("Load Loss", f"{total_load_loss_mwh:.2f}", "MWh", "bolt", "#346538"),
+    ])
     
     # ===========================
     # GENERATE SUMMARIES
@@ -280,7 +282,8 @@ for region in selected_regions:
                 cause_summary,
                 names='outage_class',
                 values='count',
-                title=f'{region} - Outage Causes Distribution'
+                title=f'{region} - Outage Causes Distribution',
+                color_discrete_sequence=TCN_COLORS,
             )
             fig1.update_layout(template="plotly")
             fig1.update_traces(textposition='inside', textinfo='percent+label')
@@ -296,7 +299,8 @@ for region in selected_regions:
                 x='party_responsible',
                 y='count',
                 title=f'{region} - Party Responsible (count)',
-                labels={'party_responsible': 'Party', 'count': 'Count'}
+                labels={'party_responsible': 'Party', 'count': 'Count'},
+                color_discrete_sequence=TCN_COLORS,
             )
             fig2.update_layout(template="plotly")
             fig2.update_xaxes(tickangle=-45)
@@ -312,7 +316,8 @@ for region in selected_regions:
                 x='station',
                 y='total_outage_min',
                 title=f'{region} - Top Stations by Outage Minutes',
-                labels={'station': 'Station', 'total_outage_min': 'Minutes'}
+                labels={'station': 'Station', 'total_outage_min': 'Minutes'},
+                color_discrete_sequence=TCN_COLORS,
             )
             fig3.update_layout(template="plotly")
             fig3.update_xaxes(tickangle=-45)
@@ -328,7 +333,8 @@ for region in selected_regions:
                 x='feeder_33kv',
                 y='outage_hrs',
                 title=f'{region} - Top Feeders by Outage Hours',
-                labels={'feeder_33kv': 'Feeder', 'outage_hrs': 'Hours'}
+                labels={'feeder_33kv': 'Feeder', 'outage_hrs': 'Hours'},
+                color_discrete_sequence=TCN_COLORS,
             )
             fig4.update_layout(template="plotly")
             fig4.update_xaxes(tickangle=-45)

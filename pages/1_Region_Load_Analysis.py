@@ -10,14 +10,15 @@ import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
 from utils.pdf_generator import generate_pdf
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 
 # enforce authentication
 login()
 
-st.set_page_config(page_title="Region Load Analysis", layout="wide")
-
-st.title("Region Load Analysis")
+st.set_page_config(page_title="Region Load Analysis", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Region Load Analysis", "33kV Feeder Network · Region Rollup")
 
 # Date range picker
 today = date.today()
@@ -52,7 +53,6 @@ grouped_data = feeder_df.groupby(['reading_date', 'reading_time'])['load_mw'].su
 grouped_data = grouped_data.sort_values(by=['reading_date', 'reading_time'])
 
 # KPI row
-col1, col2, col3, col4 = st.columns(4)
 max_load_row = grouped_data.loc[grouped_data['load_mw'].idxmax()]
 max_load = max_load_row['load_mw']
 max_date = max_load_row['reading_date']
@@ -66,10 +66,13 @@ min_time = min_load_row['reading_time']
 avg_load = grouped_data["load_mw"].mean()
 unique_regions = feeder_df["region"].nunique()
 
-col1.metric(f"Max Load (MW)", f"{max_load:.3f}", help=f"Date {max_date} at {max_time}")
-col2.metric("Avg Load (MW)", f"{avg_load:.3f}")
-col3.metric(f"Min Load (MW)", f"{min_load:.3f}", help=f"Date {min_date} at {min_time}")
-col4.metric("Regions", f"{unique_regions}")
+kpi_grid([
+    kpi_card("Max Load", f"{max_load:.3f}", "MW", "bolt", "#c81e28"),
+    kpi_card("Avg Load", f"{avg_load:.3f}", "MW", "pulse", "#1e3a7a"),
+    kpi_card("Min Load", f"{min_load:.3f}", "MW", "chart", "#1F6C9F"),
+    kpi_card("Regions", f"{unique_regions}", "", "building", "#956400"),
+])
+st.caption(f"Max at {max_date} {max_time} · Min at {min_date} {min_time}")
 
 
 
@@ -81,12 +84,16 @@ region_df = feeder_df[feeder_df["region"] == region]
 region_hourly = region_df.groupby(["reading_time"])["load_mw"].sum().reset_index()
 region_hourly = region_hourly.sort_values("reading_time")
 
-fig = px.line(region_hourly, x="reading_time", y="load_mw", title=f"Hourly Load for {region}")
+fig = px.line(region_hourly, x="reading_time", y="load_mw", title=f"Hourly Load for {region}", color_discrete_sequence=TCN_COLORS)
+fig.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig)
 st.plotly_chart(fig, use_container_width=True)
 
 # Top feeders in region
 top_feed = region_df.groupby("feeder_33kv")["load_mw"].mean().reset_index().sort_values("load_mw", ascending=False).head(10)
-fig2 = px.bar(top_feed, x="feeder_33kv", y="load_mw", title=f"Top 10 Feeders by Avg Load ({region})")
+fig2 = px.bar(top_feed, x="feeder_33kv", y="load_mw", title=f"Top 10 Feeders by Avg Load ({region})", color_discrete_sequence=TCN_COLORS)
+fig2.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig2)
 st.plotly_chart(fig2, use_container_width=True)
 
 # Export to PDF

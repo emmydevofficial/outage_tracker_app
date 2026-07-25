@@ -29,11 +29,13 @@ from utils.db import (
     read_transformer_load,
 )
 from utils.activity_log import log_activity
+from utils.branding import inject_css, page_header
 
 login()
 
-st.set_page_config(page_title="Load Data Management", layout="wide")
-st.title("⚡ Load Data Management")
+st.set_page_config(page_title="Load Data Management", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Load Data Management", "33kV Feeder Network · Data Management")
 st.caption(
     "Delete hourly load readings by date range and region. "
     "All operations are permanent and cannot be undone."

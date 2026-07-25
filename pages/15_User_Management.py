@@ -17,10 +17,11 @@ import pandas as pd
 from utils.db import list_users, create_user, update_user, delete_user, count_super_admins
 from utils.regions import REGIONS
 from utils.activity_log import log_activity
+from utils.branding import inject_css, page_header
 
-st.set_page_config(page_title="User Management", layout="wide")
-
-st.title("👥 User Management")
+st.set_page_config(page_title="User Management", page_icon="⚡", layout="wide")
+inject_css()
+page_header("User Management", "33kV Feeder Network · Access Control")
 st.caption("Super Admin only. Regional users can view, operate on, and upload data only for their assigned region.")
 
 ROLE_LABELS = {"super_admin": "Super Admin", "regional_user": "Regional User"}

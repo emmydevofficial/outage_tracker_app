@@ -2,6 +2,7 @@ import streamlit as st
 from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 import plotly.express as px
 import tempfile
@@ -9,8 +10,9 @@ import os
 
 login()
 
-st.set_page_config(page_title="Regional Dashboard", layout="wide")
-st.title("Regional Dashboard")
+st.set_page_config(page_title="Regional Dashboard", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Regional Dashboard", "33kV Feeder Network · Cross-Region Comparison")
 st.markdown(
     "Use this dashboard to inspect outage performance by region, compare load loss and outage duration, and review per-region outage metrics."
 )
@@ -76,11 +78,12 @@ total_outage_hours_selected = selected_df["duration_hr"].sum()
 total_load_loss_selected = selected_df["load_loss_mwh"].sum()
 
 st.subheader("Regional Summary")
-summary_cols = st.columns(4)
-summary_cols[0].metric("Regions", len(selected_regions))
-summary_cols[1].metric("Total Outages", int(selected_df["id"].count()))
-summary_cols[2].metric("Total Outage Hours", f"{total_outage_hours_selected:.2f}")
-summary_cols[3].metric("Total Load Loss (MWh)", f"{total_load_loss_selected:.2f}")
+kpi_grid([
+    kpi_card("Regions", f"{len(selected_regions)}", "", "building", "#1e3a7a"),
+    kpi_card("Outages", f"{int(selected_df['id'].count())}", "", "alert", "#c81e28"),
+    kpi_card("Outage Hours", f"{total_outage_hours_selected:.2f}", "hrs", "clock", "#1F6C9F"),
+    kpi_card("Load Loss", f"{total_load_loss_selected:.2f}", "MWh", "bolt", "#956400"),
+])
 
 st.dataframe(region_summary)
 
@@ -97,11 +100,12 @@ for region in selected_regions:
     region_feeders = int(region_df["feeder_33kv"].nunique())
 
     with st.expander(f"{region} Region — Outage details", expanded=len(selected_regions) == 1):
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Outages", region_outages)
-        col2.metric("Outage Hours", f"{region_total_hours:.2f}")
-        col3.metric("Load Loss (MWh)", f"{region_total_load_loss:.2f}")
-        col4.metric("Avg Duration (min)", f"{region_avg_duration:.1f}")
+        kpi_grid([
+            kpi_card("Outages", f"{region_outages}", "", "alert", "#c81e28"),
+            kpi_card("Outage Hours", f"{region_total_hours:.2f}", "hrs", "clock", "#1e3a7a"),
+            kpi_card("Load Loss", f"{region_total_load_loss:.2f}", "MWh", "bolt", "#1F6C9F"),
+            kpi_card("Avg Duration", f"{region_avg_duration:.1f}", "min", "clock", "#956400"),
+        ])
 
         st.markdown("**Load Loss Summary**")
         load_loss_card = st.info(
@@ -149,6 +153,7 @@ for region in selected_regions:
             y="outage_hours",
             title=f"Top Stations by Outage Hours — {region}",
             labels={"outage_hours": "Outage Hours"},
+            color_discrete_sequence=TCN_COLORS,
         )
         feeder_fig = px.bar(
             top_feeders,
@@ -156,19 +161,26 @@ for region in selected_regions:
             y="outage_hours",
             title=f"Top Feeders by Outage Hours — {region} Region",
             labels={"outage_hours": "Outage Hours"},
+            color_discrete_sequence=TCN_COLORS,
         )
         cause_fig = px.pie(
             cause_breakdown,
             names="outage_class",
             values="count",
             title=f"Outage Cause Breakdown — {region} Region",
+            color_discrete_sequence=TCN_COLORS,
         )
         party_fig = px.pie(
             party_breakdown,
             names="party_responsible",
             values="count",
             title=f"Party Responsible Breakdown — {region} Region",
+            color_discrete_sequence=TCN_COLORS,
         )
+
+        for _f in (station_fig, feeder_fig, cause_fig, party_fig):
+            _f.update_layout(**TCN_CHART_LAYOUT)
+            _style_chart(_f)
 
         st.plotly_chart(station_fig, use_container_width=True)
         st.plotly_chart(feeder_fig, use_container_width=True)

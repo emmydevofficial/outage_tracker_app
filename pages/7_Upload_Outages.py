@@ -13,12 +13,13 @@ import numpy as np
 from utils.db import insert_outages, insert_outages_from_csv
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
+from utils.branding import inject_css, page_header
 
 login()
 
-st.set_page_config(page_title="Upload Outages", layout="wide")
-
-st.title("📁 Upload Outage CSV")
+st.set_page_config(page_title="Upload Outages", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Upload Outage CSV", "33kV Feeder Network · Data Ingestion")
 
 upload = st.file_uploader("Choose outage CSV file", type=["csv"])
 

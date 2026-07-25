@@ -8,13 +8,14 @@ from utils.auth import login, filter_to_user_region
 import pandas as pd
 import plotly.express as px
 from utils.db import read_outages
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 
 login()
 
-st.set_page_config(page_title="Outage Analytics", layout="wide")
-
-st.title("Outage Analytics")
+st.set_page_config(page_title="Outage Analytics", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Outage Analytics", "33kV Feeder Network · Outage Cause & Duration Analysis")
 
 today = date.today()
 start_default = today - timedelta(days=30)
@@ -49,7 +50,6 @@ if feeder_sel != "All":
     out_df = out_df[out_df["feeder_33kv"] == feeder_sel]
 
 # Simple KPIs
-col1, col2, col3 = st.columns(3)
 num_outages = len(out_df)
 # compute durations in minutes when date_on/time_on available
 out_df['start_ts'] = pd.to_datetime(out_df['date_off'].astype(str) + ' ' + out_df['time_off'].astype(str), errors='coerce')
@@ -60,25 +60,32 @@ total_outage_minutes = out_df['duration_min'].sum(skipna=True)
 avg_duration = out_df['duration_min'].mean()
 avg_duration_val = 0.0 if pd.isna(avg_duration) else avg_duration
 
-col1.metric("Number of outages", f"{num_outages}")
-col2.metric("Total outage minutes", f"{total_outage_minutes:.1f}")
-col3.metric("Avg outage (min)", f"{avg_duration_val:.1f}")
+kpi_grid([
+    kpi_card("Outages", f"{num_outages}", "", "alert", "#c81e28"),
+    kpi_card("Total Outage Time", f"{total_outage_minutes:.1f}", "min", "clock", "#1e3a7a"),
+    kpi_card("Avg Outage", f"{avg_duration_val:.1f}", "min", "clock", "#1F6C9F"),
+])
 
 # Outage cause pie
 cause_cnt = out_df['outage_class'].fillna('Unknown').value_counts().reset_index()
 cause_cnt.columns = ['outage_class', 'count']
-fig = px.pie(cause_cnt, names='outage_class', values='count', title='Outage Causes')
+fig = px.pie(cause_cnt, names='outage_class', values='count', title='Outage Causes', color_discrete_sequence=TCN_COLORS)
+fig.update_layout(**TCN_CHART_LAYOUT)
 st.plotly_chart(fig, use_container_width=True)
 
 # Party responsible bar
 party = out_df['party_responsible'].fillna('Unknown').value_counts().reset_index()
 party.columns = ['party', 'count']
-fig2 = px.bar(party, x='party', y='count', title='Party Responsible (count)')
+fig2 = px.bar(party, x='party', y='count', title='Party Responsible (count)', color_discrete_sequence=TCN_COLORS)
+fig2.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig2)
 st.plotly_chart(fig2, use_container_width=True)
 
 # Outage frequency by feeder
 feeder_cnt = out_df.groupby('feeder_33kv').size().reset_index(name='count').sort_values('count', ascending=False).head(20)
-fig3 = px.bar(feeder_cnt, x='feeder_33kv', y='count', title='Top Feeders by Outage Count')
+fig3 = px.bar(feeder_cnt, x='feeder_33kv', y='count', title='Top Feeders by Outage Count', color_discrete_sequence=TCN_COLORS)
+fig3.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig3)
 st.plotly_chart(fig3, use_container_width=True)
 
 # Top 10 Event Indications horizontal bar chart
@@ -92,8 +99,11 @@ fig4 = px.bar(
     y='event_indication',
     orientation='h',
     title='Top 10 Event Indications',
-    labels={'count': 'Count', 'event_indication': 'Event Indication'}
+    labels={'count': 'Count', 'event_indication': 'Event Indication'},
+    color_discrete_sequence=TCN_COLORS,
 )
+fig4.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig4)
 # Reverse category order on y-axis so the largest count is at the top
 fig4.update_layout(yaxis={'categoryorder': 'total ascending'})
 st.plotly_chart(fig4, use_container_width=True)

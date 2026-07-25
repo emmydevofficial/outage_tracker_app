@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import streamlit as st
 from sqlalchemy import text
@@ -5,6 +7,9 @@ import bcrypt
 
 from .db import get_engine, get_user_role_and_region
 from .activity_log import log_activity
+from .branding import render_login_screen
+
+TCN_OUTAGE_MANAGER_URL = os.getenv("TCN_OUTAGE_MANAGER_URL", "http://localhost:8502")
 
 
 def hash_password(password: str) -> str:
@@ -66,6 +71,9 @@ def login():
         region_label = st.session_state.get("region") or "All Regions"
         role_label = "Super Admin" if st.session_state.get("role") == "super_admin" else "Regional User"
         st.sidebar.caption(f"👤 {st.session_state.get('username', '')} — {role_label} — {region_label}")
+        st.sidebar.link_button(
+            "🗼 Open TCN Outage Manager", TCN_OUTAGE_MANAGER_URL, use_container_width=True,
+        )
         # optionally provide a logout button
         if st.sidebar.button("Logout"):
             log_activity("logout")
@@ -80,13 +88,17 @@ def login():
                 pass
         return
 
-    st.sidebar.title("🔐 Login")
-    username = st.sidebar.text_input("Username")
-    password = st.sidebar.text_input("Password", type="password")
+    def _verify(u, p):
+        if not authenticate(u, p):
+            return False, None, None
+        role, region = get_user_role_and_region(u)
+        return True, role, region
 
-    if st.sidebar.button("Login"):
-        if authenticate(username, password):
-            role, region = get_user_role_and_region(username)
+    username, password, submitted, result = render_login_screen(verify_fn=_verify)
+
+    if submitted:
+        ok, role, region = result
+        if ok:
             st.session_state.logged_in = True
             st.session_state.username = username
             st.session_state.role = role
@@ -98,7 +110,8 @@ def login():
                     pass
         else:
             log_activity("login_failed", f"attempted username: '{username}'")
-            st.sidebar.error("Invalid username or password.")
+            st.session_state["_login_error"] = "Invalid username or password."
+            st.rerun()
     st.stop()
 
 

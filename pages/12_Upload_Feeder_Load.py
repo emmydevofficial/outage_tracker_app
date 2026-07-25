@@ -26,10 +26,11 @@ from utils.load_upload import build_merge_fill_map, normalize_time_header, class
 from utils.regions import normalize_region
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid
 
-st.set_page_config(page_title="Upload Feeder Load", layout="wide")
-
-st.title("📥 Upload 33kV Feeder Load Tracking")
+st.set_page_config(page_title="Upload Feeder Load", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Upload 33kV Feeder Load Tracking", "33kV Feeder Network · Data Ingestion")
 st.markdown(
     "Upload the hourly DISCO (33kV Feeder) Load Management Tracking sheet for a single region/date. "
     "The region is read from the sheet itself, so this works for any region's file."
@@ -115,11 +116,12 @@ if uploaded is not None:
     kind_counts = pd.Series(kinds).value_counts()
 
     st.subheader("Parse Summary")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Region", region)
-    c2.metric("Total Readings", f"{len(df):,}")
-    c3.metric("Numeric Readings", f"{kind_counts.get('numeric', 0):,}")
-    c4.metric("Flagged (fault/format)", f"{kind_counts.get('fault', 0) + kind_counts.get('wrong_format', 0):,}")
+    kpi_grid([
+        kpi_card("Region", region, "", "building", "#1e3a7a"),
+        kpi_card("Total Readings", f"{len(df):,}", "", "chart", "#1F6C9F"),
+        kpi_card("Numeric Readings", f"{kind_counts.get('numeric', 0):,}", "", "pulse", "#346538"),
+        kpi_card("Flagged", f"{kind_counts.get('fault', 0) + kind_counts.get('wrong_format', 0):,}", "", "alert", "#c81e28"),
+    ])
 
     flagged = df[df["cause"].notna()]
     if not flagged.empty:

@@ -19,10 +19,11 @@ from datetime import date, timedelta
 
 from utils.activity_log import read_activity_log, list_activity_actions
 from utils.file_storage import list_uploaded_files, purge_expired_files, get_file_bytes
+from utils.branding import inject_css, page_header
 
-st.set_page_config(page_title="Activity Log", layout="wide")
-
-st.title("📜 Activity Log & Uploaded Files")
+st.set_page_config(page_title="Activity Log", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Activity Log & Uploaded Files", "33kV Feeder Network · Audit Trail")
 st.caption("Super Admin only. Read-only page views are not logged -- only actions that change data.")
 
 # ══════════════════════════════════════════════════════════════════════════════

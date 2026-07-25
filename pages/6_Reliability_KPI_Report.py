@@ -8,14 +8,15 @@ import streamlit as st
 from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages, read_tcn_sla_compliance
+from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 import plotly.express as px
 
 login()
 
-st.set_page_config(page_title="Reliability KPIs", layout="wide")
-
-st.title("Reliability KPI Report")
+st.set_page_config(page_title="Reliability KPIs", page_icon="⚡", layout="wide")
+inject_css()
+page_header("Reliability KPI Report", "33kV Feeder Network · SAIDI/SAIFI & SLA Compliance")
 
 today = date.today()
 start_default = today - timedelta(days=30)
@@ -87,7 +88,9 @@ station_summary['avg_load_loss_mwh'] = station_summary['total_load_loss_mwh'] / 
 
 st.dataframe(station_summary)
 
-fig = px.bar(station_summary.head(20), x='station', y='total_outage_min', title='Top stations by total outage minutes')
+fig = px.bar(station_summary.head(20), x='station', y='total_outage_min', title='Top stations by total outage minutes', color_discrete_sequence=TCN_COLORS)
+fig.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig)
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("📊 Outage Table")
@@ -211,5 +214,7 @@ styler = filtered.style.map(
 
 st.dataframe(styler)
 
-fig = px.bar(feeder_summary.head(20), x='feeder_33kv', y='outage_hrs', title='Top feeders by total outage minutes')
+fig = px.bar(feeder_summary.head(20), x='feeder_33kv', y='outage_hrs', title='Top feeders by total outage minutes', color_discrete_sequence=TCN_COLORS)
+fig.update_layout(**TCN_CHART_LAYOUT)
+_style_chart(fig)
 st.plotly_chart(fig, use_container_width=True)
