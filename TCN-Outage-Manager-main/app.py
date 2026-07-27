@@ -21,6 +21,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ──────────────────────────────────────────────────────────────
 # Paths & constants
@@ -37,9 +40,8 @@ APP_BG = BASE_DIR / "tcn_background.png"
 LOGO = BASE_DIR / "tcn_logo.png"
 
 # URL of the Load & Outage Analytics app (33kV feeder load/outages), used for
-# the sidebar cross-link button. Update once that app is deployed somewhere
-# other than localhost.
-LOAD_OUTAGE_ANALYTICS_URL = os.getenv("LOAD_OUTAGE_ANALYTICS_URL", "http://localhost:8501")
+# the sidebar cross-link button.
+LOAD_OUTAGE_ANALYTICS_URL = os.getenv("LOAD_OUTAGE_ANALYTICS_URL", "http://93.127.137.148:8501")
 
 TCN_RED = "#c81e28"
 TCN_BLUE = "#1e3a7a"
@@ -1924,7 +1926,11 @@ def main():
     """, unsafe_allow_html=True)
 
     if not DATA_FILE.exists():
-        st.error(f"Data file not found: {DATA_FILE.name}. Upload it via the admin Upload tab or place it in the app folder.")
+        if user["role"] == "admin":
+            st.warning(f"Data file not found: {DATA_FILE.name}. Upload it below to get started.")
+            show_upload()
+        else:
+            st.error(f"Data file not found: {DATA_FILE.name}. Ask an admin to upload it.")
         return
 
     df = load_data()

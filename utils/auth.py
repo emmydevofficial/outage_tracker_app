@@ -9,7 +9,7 @@ from .db import get_engine, get_user_role_and_region
 from .activity_log import log_activity
 from .branding import render_login_screen
 
-TCN_OUTAGE_MANAGER_URL = os.getenv("TCN_OUTAGE_MANAGER_URL", "http://localhost:8502")
+TCN_OUTAGE_MANAGER_URL = os.getenv("TCN_OUTAGE_MANAGER_URL", "http://93.127.137.148:8502")
 
 
 def hash_password(password: str) -> str:
