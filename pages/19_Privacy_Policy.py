@@ -104,5 +104,5 @@ st.markdown(
 st.subheader("Questions")
 st.markdown(
     "For questions about this policy or your data, contact your Super Admin "
-    "or TCN IT. See the **About** page (in the sidebar) for the project team."
+    "or TCN Operations Dept TCC. See the **About** page (in the sidebar) for the project team."
 )
