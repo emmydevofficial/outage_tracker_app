@@ -72,7 +72,7 @@ def login():
         role_label = "Super Admin" if st.session_state.get("role") == "super_admin" else "Regional User"
         st.sidebar.caption(f"👤 {st.session_state.get('username', '')} — {role_label} — {region_label}")
         st.sidebar.link_button(
-            "🗼 Open TCN Outage Manager", TCN_OUTAGE_MANAGER_URL, use_container_width=True,
+            "🗼 330kV · 132kV Outage Manager", TCN_OUTAGE_MANAGER_URL, use_container_width=True,
         )
         # optionally provide a logout button
         if st.sidebar.button("Logout"):

@@ -8,7 +8,7 @@ import streamlit as st
 from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages, read_tcn_sla_compliance
-from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 import plotly.express as px
 
@@ -86,7 +86,7 @@ station_summary['avg_outage_min'] = station_summary['total_outage_min'] / statio
 station_summary['outage_hour'] = station_summary['total_outage_min'] / 60.0
 station_summary['avg_load_loss_mwh'] = station_summary['total_load_loss_mwh'] / station_summary['outages_count']
 
-st.dataframe(station_summary.reset_index(drop=True))
+st.dataframe(one_indexed(station_summary))
 
 fig = px.bar(station_summary.head(20), x='station', y='total_outage_min', title='Top stations by total outage minutes', color_discrete_sequence=TCN_COLORS)
 fig.update_layout(**TCN_CHART_LAYOUT)
@@ -105,7 +105,7 @@ feeder_summary['outage_hrs'] = feeder_summary['total_outage_min'] / 60.0
 feeder_summary['avg_load_loss_mwh'] = feeder_summary['total_load_loss_mwh'] / feeder_summary['outages_count']
 feeder_summary = feeder_summary.drop(columns=["total_outage_min"])
 
-st.dataframe(feeder_summary.reset_index(drop=True))
+st.dataframe(one_indexed(feeder_summary))
 
 st.subheader("📊 Outage Table By Party Responsible")
 
@@ -200,8 +200,7 @@ elif status_choice == "Negative (<0)":
 
 # filtering above leaves gaps in the row index (e.g. 0, 2, 5, 7 ...) -- give
 # the displayed table a clean, contiguous, 1-based row count instead
-filtered = filtered.reset_index(drop=True)
-filtered.index = filtered.index + 1
+filtered = one_indexed(filtered)
 
 # apply color styling to available hours column (green if positive, red if negative)
 def style_available_hours(val):

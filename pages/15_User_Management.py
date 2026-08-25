@@ -17,7 +17,7 @@ import pandas as pd
 from utils.db import list_users, create_user, update_user, delete_user, count_super_admins
 from utils.regions import REGIONS
 from utils.activity_log import log_activity
-from utils.branding import inject_css, page_header
+from utils.branding import inject_css, page_header, one_indexed
 
 st.set_page_config(page_title="User Management", page_icon="⚡", layout="wide")
 inject_css()
@@ -37,7 +37,7 @@ display_df = users_df.copy()
 display_df["user_role"] = display_df["user_role"].map(ROLE_LABELS).fillna(display_df["user_role"])
 display_df["region"] = display_df["region"].fillna("— (all regions) —")
 st.dataframe(
-    display_df.rename(columns={"user_role": "Role", "region": "Region", "username": "Username", "created_at": "Created"}).reset_index(drop=True),
+    one_indexed(display_df.rename(columns={"user_role": "Role", "region": "Region", "username": "Username", "created_at": "Created"})),
     use_container_width=True,
 )
 

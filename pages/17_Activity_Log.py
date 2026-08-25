@@ -19,7 +19,7 @@ from datetime import date, timedelta
 
 from utils.activity_log import read_activity_log, list_activity_actions
 from utils.file_storage import list_uploaded_files, purge_expired_files, get_file_bytes
-from utils.branding import inject_css, page_header
+from utils.branding import inject_css, page_header, one_indexed
 
 st.set_page_config(page_title="Activity Log", page_icon="⚡", layout="wide")
 inject_css()
@@ -51,7 +51,7 @@ log_df = read_activity_log(
 if username_choice:
     log_df = log_df[log_df["username"].astype(str).str.contains(username_choice, case=False, na=False)]
 
-st.dataframe(log_df.reset_index(drop=True), use_container_width=True, height=400)
+st.dataframe(one_indexed(log_df), use_container_width=True, height=400)
 st.caption(f"Showing {len(log_df):,} of the most recent 500 matching entries.")
 
 st.markdown("---")

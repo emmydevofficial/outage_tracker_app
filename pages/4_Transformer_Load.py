@@ -8,7 +8,7 @@ from utils.auth import login, filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_transformer_load
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 
 login()
@@ -58,7 +58,7 @@ if not trans_sel.empty:
         'min_load', 'min_date', 'min_time'
     ])
     st.subheader('Per-transformer load extremes')
-    st.dataframe(df_tx_ext.reset_index(drop=True))
+    st.dataframe(one_indexed(df_tx_ext))
 
 load_by_tx = trans_sel.groupby('transformer_nomenclature')['load_mw'].mean().reset_index().sort_values('load_mw', ascending=False)
 fig = px.bar(load_by_tx.head(10), x='transformer_nomenclature', y='load_mw', title=f"Transformer Loading (Avg) — {station}", color_discrete_sequence=TCN_COLORS)

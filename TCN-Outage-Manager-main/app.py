@@ -1042,7 +1042,7 @@ def show_dashboard(df, user):
     <div class="dash-header">
         <div>
             <p class="dash-sub" style="margin-bottom:0;">Welcome back, <b>{user['name']}</b></p>
-            <h1 class="dash-title">Grid Operations Dashboard</h1>
+            <h1 class="dash-title">Grid Outage Dashboard</h1>
             <p class="dash-sub">{df['Region'].nunique()} regions · {len(df):,} outage records · 330kV / 132kV network</p>
         </div>
         <span class="live-badge"><span class="live-dot"></span>Live</span>
@@ -1937,7 +1937,7 @@ def main():
     <div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.4rem;">
         {logo_html}
         <div>
-            <div style="font-size:1.35rem;font-weight:700;color:var(--text-primary);">TCN Grid Outage Manager</div>
+            <div style="font-size:1.35rem;font-weight:700;color:var(--text-primary);">330kV · 132kV Outage Manager</div>
             <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);">
                 330kV · 132kV Equipment Outages · Analytics · Reporting
             </div>

@@ -49,6 +49,18 @@ def _style_chart(fig):
     return fig
 
 
+def one_indexed(df):
+    """Row-number a dataframe for display: contiguous, starting at 1 (not 0).
+
+    Use this on every dataframe passed to st.dataframe() -- pandas operations
+    like filtering by a boolean mask or sorting after reset_index() leave
+    gappy/shuffled index labels, which read as broken row numbers on screen.
+    """
+    df = df.reset_index(drop=True)
+    df.index = df.index + 1
+    return df
+
+
 def _eyebrow(text, bg="#E8EEF7", fg=TCN_BLUE):
     st.markdown(
         f'<span style="display:inline-block;font-size:0.8rem;font-weight:700;'

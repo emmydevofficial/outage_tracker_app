@@ -2,7 +2,7 @@ import streamlit as st
 from utils.auth import login, filter_to_user_region
 import pandas as pd
 from utils.db import read_outages
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 import plotly.express as px
 import tempfile
@@ -85,7 +85,7 @@ kpi_grid([
     kpi_card("Load Loss", f"{total_load_loss_selected:.2f}", "MWh", "bolt", "#956400"),
 ])
 
-st.dataframe(region_summary.reset_index(drop=True))
+st.dataframe(one_indexed(region_summary))
 
 for region in selected_regions:
     region_df = selected_df[selected_df["region"] == region].copy()
@@ -188,6 +188,6 @@ for region in selected_regions:
         st.plotly_chart(party_fig, use_container_width=True)
 
         st.subheader("Top station outage details")
-        st.dataframe(top_stations.reset_index(drop=True))
+        st.dataframe(one_indexed(top_stations))
         st.subheader("Top feeder outage details")
-        st.dataframe(top_feeders.reset_index(drop=True))
+        st.dataframe(one_indexed(top_feeders))
