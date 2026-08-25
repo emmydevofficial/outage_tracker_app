@@ -9,7 +9,7 @@ Run with: streamlit run app.py
 
 import streamlit as st
 from utils.auth import login
-from utils.branding import inject_css, page_header
+from utils.branding import inject_css, page_header, credits_section
 
 # require login before doing anything else
 login()
@@ -36,6 +36,7 @@ st.markdown(
     15. User Management (Super Admin only)
     16. Load Data Management (delete feeder/line/transformer load by date and region)
     17. Activity Log (Super Admin only: audit trail + uploaded files directory)
+    18. About
 
     The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
     `db.py` and `pdf_generator.py`.
@@ -46,8 +47,7 @@ st.sidebar.header("Quick actions")
 if st.sidebar.button("Refresh data cache"):
     st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.write("Developer: Oluwaloni Emmanuel")
+credits_section()
 
 
 # ------------------------------------------------------------------

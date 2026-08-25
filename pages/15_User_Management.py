@@ -37,7 +37,7 @@ display_df = users_df.copy()
 display_df["user_role"] = display_df["user_role"].map(ROLE_LABELS).fillna(display_df["user_role"])
 display_df["region"] = display_df["region"].fillna("— (all regions) —")
 st.dataframe(
-    display_df.rename(columns={"user_role": "Role", "region": "Region", "username": "Username", "created_at": "Created"}),
+    display_df.rename(columns={"user_role": "Role", "region": "Region", "username": "Username", "created_at": "Created"}).reset_index(drop=True),
     use_container_width=True,
 )
 

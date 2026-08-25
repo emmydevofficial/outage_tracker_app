@@ -51,7 +51,7 @@ log_df = read_activity_log(
 if username_choice:
     log_df = log_df[log_df["username"].astype(str).str.contains(username_choice, case=False, na=False)]
 
-st.dataframe(log_df, use_container_width=True, height=400)
+st.dataframe(log_df.reset_index(drop=True), use_container_width=True, height=400)
 st.caption(f"Showing {len(log_df):,} of the most recent 500 matching entries.")
 
 st.markdown("---")

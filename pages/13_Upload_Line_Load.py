@@ -133,13 +133,13 @@ if uploaded is not None:
     if not flagged.empty:
         with st.expander(f"View {len(flagged):,} flagged reading(s) (fault codes + wrong data format)"):
             st.dataframe(
-                flagged[["area", "transmission_interface", "line_voltage", "line_nomenclature", "disco", "reading_time", "cause"]],
+                flagged[["area", "transmission_interface", "line_voltage", "line_nomenclature", "disco", "reading_time", "cause"]].reset_index(drop=True),
                 use_container_width=True,
                 height=300,
             )
 
     st.subheader("Preview (first 50 rows)")
-    st.dataframe(df.head(50), use_container_width=True)
+    st.dataframe(df.head(50).reset_index(drop=True), use_container_width=True)
     st.caption(
         "Re-uploading the same reading_date/reading_time/transmission_interface/line_nomenclature "
         "combination will update the existing row instead of creating a duplicate."

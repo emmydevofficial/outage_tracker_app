@@ -85,7 +85,7 @@ kpi_grid([
     kpi_card("Load Loss", f"{total_load_loss_selected:.2f}", "MWh", "bolt", "#956400"),
 ])
 
-st.dataframe(region_summary)
+st.dataframe(region_summary.reset_index(drop=True))
 
 for region in selected_regions:
     region_df = selected_df[selected_df["region"] == region].copy()
@@ -188,6 +188,6 @@ for region in selected_regions:
         st.plotly_chart(party_fig, use_container_width=True)
 
         st.subheader("Top station outage details")
-        st.dataframe(top_stations)
+        st.dataframe(top_stations.reset_index(drop=True))
         st.subheader("Top feeder outage details")
-        st.dataframe(top_feeders)
+        st.dataframe(top_feeders.reset_index(drop=True))

@@ -58,7 +58,7 @@ if not trans_sel.empty:
         'min_load', 'min_date', 'min_time'
     ])
     st.subheader('Per-transformer load extremes')
-    st.dataframe(df_tx_ext)
+    st.dataframe(df_tx_ext.reset_index(drop=True))
 
 load_by_tx = trans_sel.groupby('transformer_nomenclature')['load_mw'].mean().reset_index().sort_values('load_mw', ascending=False)
 fig = px.bar(load_by_tx.head(10), x='transformer_nomenclature', y='load_mw', title=f"Transformer Loading (Avg) — {station}", color_discrete_sequence=TCN_COLORS)

@@ -22,16 +22,16 @@ TCN_COLORS = [TCN_BLUE, TCN_RED, "#1F6C9F", "#E06E6A", "#7DA3D8", "#956400", "#3
 TCN_RED_SCALE = [[0, "#FBEAEA"], [0.5, "#E06E6A"], [1, TCN_RED]]
 
 TCN_CHART_LAYOUT = dict(
-    font=dict(family="Source Sans Pro, sans-serif", size=12, color="#37352F"),
+    font=dict(family="Source Sans Pro, sans-serif", size=14, color="#37352F"),
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
     margin=dict(l=10, r=10, t=48, b=10),
-    title_font=dict(size=14, color="#37352F"),
+    title_font=dict(size=17, color="#37352F"),
     bargap=0.25,
     hoverlabel=dict(
         bgcolor="rgba(30, 47, 92, 0.92)",
         bordercolor="rgba(255,255,255,0.15)",
-        font=dict(size=12, color="white"),
+        font=dict(size=14, color="white"),
     ),
 )
 
@@ -51,8 +51,8 @@ def _style_chart(fig):
 
 def _eyebrow(text, bg="#E8EEF7", fg=TCN_BLUE):
     st.markdown(
-        f'<span style="display:inline-block;font-size:0.68rem;font-weight:700;'
-        f'letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;'
+        f'<span style="display:inline-block;font-size:0.8rem;font-weight:700;'
+        f'letter-spacing:0.06em;text-transform:uppercase;padding:4px 11px;'
         f'border-radius:5px;background:{bg};color:{fg};">{text}</span>',
         unsafe_allow_html=True,
     )
@@ -72,7 +72,7 @@ ICONS = {
 
 def kpi_card(label, value, unit="", icon="bolt", color=TCN_BLUE):
     unit_html = (
-        f'<span style="font-size:0.7rem;color:var(--text-tertiary);margin-left:3px;">{unit}</span>'
+        f'<span style="font-size:0.85rem;font-weight:600;color:var(--text-tertiary);margin-left:3px;">{unit}</span>'
         if unit else ""
     )
     r, g, b = tuple(int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
@@ -114,7 +114,9 @@ def inject_css():
         --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     }}
     {bg_rule}
+    html {{ font-size: 18px; }}
     html, body, [class*="css"] {{ font-family: 'Source Sans Pro', sans-serif; }}
+    p, li, label {{ font-size: 1rem; line-height: 1.5; }}
 
     /* Sidebar */
     [data-testid="stSidebar"] {{
@@ -123,6 +125,12 @@ def inject_css():
     }}
     [data-testid="stSidebar"] * {{ color: #E8ECF5 !important; }}
     [data-testid="stSidebar"] hr {{ border-color: rgba(255,255,255,0.15); }}
+    [data-testid="stSidebarNav"] a span {{
+        font-size: 0.95rem !important; font-weight: 600 !important;
+    }}
+    [data-testid="stSidebar"] small {{
+        font-size: 0.85rem !important; font-weight: 600 !important;
+    }}
 
     /* Filters header */
     .flt-header {{
@@ -139,13 +147,13 @@ def inject_css():
         box-shadow: 0 2px 8px rgba(200,30,40,0.4);
     }}
     .flt-icon svg {{ width: 17px; height: 17px; }}
-    .flt-title {{ font-size: 1.02rem; font-weight: 700; line-height: 1.2; }}
-    .flt-sub {{ font-size: 0.68rem; color: #9FB0D6 !important; letter-spacing: 0.04em; }}
+    .flt-title {{ font-size: 1.15rem; font-weight: 700; line-height: 1.2; }}
+    .flt-sub {{ font-size: 0.8rem; font-weight: 600; color: #9FB0D6 !important; letter-spacing: 0.04em; }}
 
     /* Filter widget labels */
     [data-testid="stSidebar"] .stMultiSelect label p,
     [data-testid="stSidebar"] .stDateInput label p {{
-        font-size: 0.7rem !important; font-weight: 700 !important;
+        font-size: 0.85rem !important; font-weight: 700 !important;
         text-transform: uppercase; letter-spacing: 0.09em;
         color: #9FB0D6 !important;
     }}
@@ -229,20 +237,20 @@ def inject_css():
     }}
     .kpi-icon svg {{ width: 20px; height: 20px; }}
     .kpi-label {{
-        font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em;
-        text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 2px;
+        font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 3px;
     }}
     .kpi-value {{
-        font-family: 'JetBrains Mono', monospace; font-size: 1.35rem;
-        font-weight: 600; color: var(--text-primary); line-height: 1.15;
+        font-family: 'JetBrains Mono', monospace; font-size: 1.6rem;
+        font-weight: 700; color: var(--text-primary); line-height: 1.15;
     }}
 
     /* Page header */
     .dash-header {{ display: flex; align-items: center; justify-content: space-between; margin: 0.4rem 0 0.2rem 0; }}
-    .dash-title {{ font-size: 1.9rem; font-weight: 700; color: var(--text-primary); margin: 0; }}
-    .dash-sub {{ font-size: 0.85rem; color: var(--text-secondary); }}
+    .dash-title {{ font-size: 2.1rem; font-weight: 700; color: var(--text-primary); margin: 0; }}
+    .dash-sub {{ font-size: 0.95rem; color: var(--text-secondary); }}
     .live-badge {{
-        display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600;
         color: #346538; background: #EDF3EC; padding: 4px 11px; border-radius: 999px;
     }}
     .live-dot {{
@@ -271,7 +279,7 @@ def inject_css():
     }}
     .stTabs [data-baseweb="tab"] p {{
         font-weight: 700 !important;
-        font-size: 0.88rem !important;
+        font-size: 1rem !important;
         letter-spacing: 0.015em;
         color: var(--text-secondary);
         transition: color 0.25s ease;
@@ -296,6 +304,43 @@ def inject_css():
         background: {TCN_RED}; border: none; border-radius: 9px; font-weight: 600;
     }}
     header[data-testid="stHeader"] {{ background: transparent; }}
+
+    /* Dataframe/table text -- st.dataframe draws its grid on canvas and reads
+       these theme values as CSS custom properties, so they DO take effect
+       even though the text itself isn't normal DOM markup. */
+    [data-testid="stDataFrame"] {{
+        --gdg-base-font-style: 600 15px !important;
+        --gdg-header-font-style: 700 15px !important;
+        --gdg-cell-horizontal-padding: 12px !important;
+        --gdg-cell-vertical-padding: 8px !important;
+    }}
+
+    /* Credits / project team card */
+    .credits-card {{
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+        padding: 1.8rem 2rem; margin: 1.6rem 0;
+        box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 4px 12px rgba(16,24,40,0.04);
+    }}
+    .credits-title {{ font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.2rem; }}
+    .credits-sub {{ font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 1.5rem; }}
+    .credits-grid {{ display: grid; grid-template-columns: 1fr; gap: 1rem; }}
+    @media (min-width: 900px) {{ .credits-grid {{ grid-template-columns: 1fr 1fr; }} }}
+    .credit-row {{
+        padding: 0.95rem 1.15rem; border-radius: 12px;
+        background: linear-gradient(135deg, rgba(30,58,122,0.05), rgba(200,30,40,0.02));
+        border-left: 3px solid var(--tcn-blue);
+    }}
+    .credit-row.credit-approved {{
+        background: linear-gradient(135deg, rgba(200,30,40,0.06), rgba(200,30,40,0.02));
+        border-left-color: var(--tcn-red);
+    }}
+    .credit-role {{
+        font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px;
+    }}
+    .credit-names {{
+        font-size: 1.05rem; font-weight: 700; color: var(--text-primary); line-height: 1.5;
+    }}
     </style>""", unsafe_allow_html=True)
 
 
@@ -313,8 +358,8 @@ def page_header(title: str, subtitle: str = "33kV Feeder Network · Load · Outa
     <div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:0.4rem;">
         {logo_html}
         <div>
-            <div style="font-size:1.35rem;font-weight:700;color:var(--text-primary);">{title}</div>
-            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);">
+            <div style="font-size:1.6rem;font-weight:700;color:var(--text-primary);">{title}</div>
+            <div style="font-size:0.85rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);">
                 {subtitle}
             </div>
         </div>
@@ -322,10 +367,39 @@ def page_header(title: str, subtitle: str = "33kV Feeder Network · Load · Outa
     """, unsafe_allow_html=True)
 
 
-def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitle="33kV Feeder Network · Load & Outage Analytics"):
+CREDITS = [
+    ("Approved By", ["Engr. Godwin A. Aguiyi (GM)"]),
+    ("Verified By", ["Engr. Gabriel Onuche", "Engr. Adejayan Adesanmi"]),
+    ("Reviewed By", ["Engr. Kelechi Elohoanya", "Engr. Tayo Ogunmola"]),
+    ("Supervised By", ["Engr. Matthew, Adedeji F."]),
+    ("Developed By", ["Engr. Ibrahim Usman", "Engr. Kingsley Okpala", "Engr. Oluwaloni Emmanuel"]),
+]
+
+
+def credits_section():
+    """Project sign-off / team card -- who approved, reviewed, and built this app."""
+    rows_html = ""
+    for role, names in CREDITS:
+        row_class = "credit-row credit-approved" if role == "Approved By" else "credit-row"
+        names_html = "<br>".join(names)
+        rows_html += (
+            f'<div class="{row_class}">'
+            f'<div class="credit-role">{role}</div>'
+            f'<div class="credit-names">{names_html}</div>'
+            f'</div>'
+        )
+    st.markdown(f"""
+    <div class="credits-card">
+        <div class="credits-title">Project Team</div>        
+        <div class="credits-grid">{rows_html}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_login_screen(verify_fn=None, subtitle="Load & Outage Analytics"):
     """Full-page centered login card, matching TCN Grid Outage Manager's login screen.
 
-    Renders the logo, title, and a form with Username/Password + Sign In.
+    Renders the logo, a headline below it, and a form with Username/Password + Sign In.
     If verify_fn is given, it's called as verify_fn(username, password) right
     after submit, inside the card, under a spinner (so the loading state is
     obvious instead of relying on Streamlit's thin top progress bar) -- its
@@ -343,6 +417,7 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
         "background: linear-gradient(160deg, #0a1630, #1e3a7a) !important;"
     )
     st.markdown(f"""<style>
+    html {{ font-size: 18px; }}
     .stApp {{ {bg_css} }}
     header[data-testid="stHeader"] {{ background: transparent; }}
     [data-testid="stSidebar"] {{ display: none; }}
@@ -365,15 +440,11 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
     }}
     .login-logo img {{ width: 64px; }}
 
-    .login-title {{
-        text-align: center; color: white; font-size: 2.1rem; font-weight: 700;
-        margin: 0.9rem 0 0.1rem 0; letter-spacing: -0.01em;
-        text-shadow: 0 2px 18px rgba(0,0,0,0.45);
-    }}
     .login-sub {{
-        text-align: center; color: rgba(255,255,255,0.72); font-size: 0.72rem;
-        font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
-        margin-bottom: 1.1rem;
+        text-align: center; color: white; font-size: 1.9rem;
+        font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+        margin: 1.2rem 0 1.5rem 0;
+        text-shadow: 0 2px 18px rgba(0,0,0,0.45);
     }}
     .login-sub .dot {{ color: {TCN_RED}; font-weight: 700; }}
 
@@ -383,17 +454,18 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
         backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
         border: 1px solid rgba(255,255,255,0.16);
         border-radius: 22px;
-        padding: 1.9rem 1.8rem 1.6rem 1.8rem;
+        padding: 2.6rem 2.4rem 2.2rem 2.4rem;
         box-shadow: 0 24px 64px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
     }}
     [data-testid="stForm"] label p {{
-        color: #C9D4EE !important; font-size: 0.7rem !important; font-weight: 700 !important;
-        text-transform: uppercase; letter-spacing: 0.1em;
+        color: #C9D4EE !important; font-size: 0.85rem !important; font-weight: 700 !important;
+        text-transform: uppercase; letter-spacing: 0.08em;
     }}
     [data-testid="stForm"] [data-testid="stTextInputRootElement"] {{
         background: rgba(255,255,255,0.09) !important;
         border: 1px solid rgba(255,255,255,0.18) !important;
         border-radius: 12px !important;
+        min-height: 3.2rem !important;
         transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
     }}
     [data-testid="stForm"] [data-testid="stTextInputRootElement"]:hover {{
@@ -404,7 +476,7 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
         border-color: rgba(224,110,106,0.85) !important;
         box-shadow: 0 0 0 3px rgba(200,30,40,0.25) !important;
     }}
-    [data-testid="stForm"] input {{ background: transparent !important; color: white !important; }}
+    [data-testid="stForm"] input {{ background: transparent !important; color: white !important; font-size: 1.2rem !important; font-weight: 500 !important; }}
     [data-testid="stForm"] input::placeholder {{ color: rgba(255,255,255,0.45) !important; }}
 
     [data-testid="stForm"] [data-testid="stTextInputRootElement"] button {{
@@ -416,13 +488,13 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
     [data-testid="stForm"] [data-testid="stFormSubmitButton"] button {{
         background: linear-gradient(135deg, {TCN_RED} 0%, #8f1620 100%) !important;
         border: none !important; border-radius: 12px !important;
-        padding: 0.62rem 1rem !important; margin-top: 0.5rem;
+        padding: 0.85rem 1rem !important; margin-top: 0.6rem;
         box-shadow: 0 4px 18px rgba(200,30,40,0.45), inset 0 1px 0 rgba(255,255,255,0.22);
         transition: transform 0.3s var(--ease-spring, ease), box-shadow 0.3s ease, filter 0.25s ease;
     }}
     [data-testid="stForm"] [data-testid="stFormSubmitButton"] button p {{
         color: white !important; font-weight: 700 !important;
-        letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.82rem !important;
+        letter-spacing: 0.06em; text-transform: uppercase; font-size: 1.05rem !important;
     }}
     [data-testid="stForm"] [data-testid="stFormSubmitButton"] button:hover {{
         transform: translateY(-2px);
@@ -433,7 +505,7 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
 
     .login-footer {{
         text-align: center; margin-top: 1.1rem;
-        color: rgba(255,255,255,0.45); font-size: 0.7rem; letter-spacing: 0.08em;
+        color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em;
     }}
     .login-footer b {{ color: rgba(255,255,255,0.65); }}
 
@@ -448,14 +520,13 @@ def render_login_screen(verify_fn=None, title="Load & Outage Analytics", subtitl
     }}
     </style>""", unsafe_allow_html=True)
 
-    _, mid, _ = st.columns([1, 1.15, 1])
+    _, mid, _ = st.columns([0.6, 2, 0.6])
     with mid:
         if logo64:
             st.markdown(
                 f'<div class="login-logo"><img src="data:image/png;base64,{logo64}"></div>',
                 unsafe_allow_html=True,
             )
-        st.markdown(f'<p class="login-title">{title}</p>', unsafe_allow_html=True)
         st.markdown(f'<p class="login-sub">{subtitle}</p>', unsafe_allow_html=True)
         with st.form("login"):
             username = st.text_input("Username", placeholder="Enter your username")

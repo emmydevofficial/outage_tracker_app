@@ -167,7 +167,7 @@ if upload is not None:
             f"if you upload now. Fix these in your source file and re-upload them separately, "
             f"or download the flagged rows below to correct and resubmit."
         )
-        st.dataframe(invalid_preview, use_container_width=True)
+        st.dataframe(invalid_preview.reset_index(drop=True), use_container_width=True)
         st.download_button(
             "Download flagged rows (CSV)",
             invalid_preview.to_csv(index=False),
@@ -190,7 +190,7 @@ if upload is not None:
         valid_df = valid_df[~region_mismatch].reset_index(drop=True)
 
     st.subheader("Preview of valid records")
-    st.dataframe(valid_df.head())
+    st.dataframe(valid_df.head().reset_index(drop=True))
     st.write(f"Valid rows ready to upload: {len(valid_df)} of {len(df)}")
 
     if valid_df.empty:

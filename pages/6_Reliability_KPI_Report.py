@@ -86,7 +86,7 @@ station_summary['avg_outage_min'] = station_summary['total_outage_min'] / statio
 station_summary['outage_hour'] = station_summary['total_outage_min'] / 60.0
 station_summary['avg_load_loss_mwh'] = station_summary['total_load_loss_mwh'] / station_summary['outages_count']
 
-st.dataframe(station_summary)
+st.dataframe(station_summary.reset_index(drop=True))
 
 fig = px.bar(station_summary.head(20), x='station', y='total_outage_min', title='Top stations by total outage minutes', color_discrete_sequence=TCN_COLORS)
 fig.update_layout(**TCN_CHART_LAYOUT)
@@ -105,7 +105,7 @@ feeder_summary['outage_hrs'] = feeder_summary['total_outage_min'] / 60.0
 feeder_summary['avg_load_loss_mwh'] = feeder_summary['total_load_loss_mwh'] / feeder_summary['outages_count']
 feeder_summary = feeder_summary.drop(columns=["total_outage_min"])
 
-st.dataframe(feeder_summary)
+st.dataframe(feeder_summary.reset_index(drop=True))
 
 st.subheader("📊 Outage Table By Party Responsible")
 
@@ -197,6 +197,11 @@ if status_choice == "Positive (≥0)":
     filtered = filtered[filtered['available_outage_hours_tcn'] >= 0]
 elif status_choice == "Negative (<0)":
     filtered = filtered[filtered['available_outage_hours_tcn'] < 0]
+
+# filtering above leaves gaps in the row index (e.g. 0, 2, 5, 7 ...) -- give
+# the displayed table a clean, contiguous, 1-based row count instead
+filtered = filtered.reset_index(drop=True)
+filtered.index = filtered.index + 1
 
 # apply color styling to available hours column (green if positive, red if negative)
 def style_available_hours(val):
