@@ -28,7 +28,7 @@ st.markdown(
     Access is region-scoped: regional users see and act on their own region only,
     while a Super Admin has full visibility and user management across all regions.
 
-    For 330kV/132kV equipment outages, see the companion **TCN Grid Outage Manager**
+    For 330kV/132kV equipment outages, see the companion **330kV · 132kV Outage Manager**
     app (linked in the sidebar).
     """
 )
