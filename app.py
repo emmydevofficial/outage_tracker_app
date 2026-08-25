@@ -29,14 +29,13 @@ st.markdown(
     4. Transformer Load
     5. Outage Analytics
     6. Reliability KPI Report
-    10. Regional Dashboard
-    12. Upload Feeder Load (33kV feeder hourly load tracking upload)
-    13. Upload Line Load (330/132kV line hourly load tracking upload)
-    14. Upload Transformer Load (transformer hourly load tracking upload)
-    15. User Management (Super Admin only)
-    16. Load Data Management (delete feeder/line/transformer load by date and region)
-    17. Activity Log (Super Admin only: audit trail + uploaded files directory)
-    18. About
+    7. Regional Dashboard
+    8. Upload Feeder Load (33kV feeder hourly load tracking upload)
+    9. Upload Line Load (330/132kV line hourly load tracking upload)
+    10. Upload Transformer Load (transformer hourly load tracking upload)
+    11. User Management (Super Admin only)
+    12. Load Data Management (delete feeder/line/transformer load by date and region)
+    13. Activity Log (Super Admin only: audit trail + uploaded files directory)
 
     The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
     `db.py` and `pdf_generator.py`.
@@ -47,7 +46,7 @@ st.sidebar.header("Quick actions")
 if st.sidebar.button("Refresh data cache"):
     st.rerun()
 
-credits_section()
+#credits_section()
 
 
 # ------------------------------------------------------------------
