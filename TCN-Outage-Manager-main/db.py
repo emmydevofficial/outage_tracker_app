@@ -187,6 +187,13 @@ def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> int:
         # dayfirst parse -> pandas datetime64 renders as unambiguous ISO
         # (YYYY-MM-DD) in the CSV the COPY below sends to Postgres
         df[col] = pd.to_datetime(df[col], dayfirst=True, errors="coerce")
+    for col in ("hour_off", "minute_off", "hour_on", "minute_on"):
+        # Excel hour/minute cells often come through as floats (6.0, 30.0)
+        # once the column has any blank cells mixed in -- Postgres COPY
+        # rejects decimal-formatted text for a SMALLINT column outright, so
+        # this must be a clean integer (or truly empty/NULL) before the CSV
+        # is built. Int64 (nullable) keeps NaN as NULL instead of "nan"/"6.0".
+        df[col] = pd.to_numeric(df[col], errors="coerce").round().astype("Int64")
 
     engine = get_engine()
     raw_conn = engine.raw_connection()
