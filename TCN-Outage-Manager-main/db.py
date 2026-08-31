@@ -176,8 +176,34 @@ def upsert_outage(row: dict, updated_by: str | None = None) -> None:
         conn.execute(query, db_row)
 
 
-def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> int:
-    """Shared COPY-into-temp-table + upsert routine, mirrors utils/db.py::upsert_feeder_load."""
+_CONFLICT_KEY = ["substation", "equipment", "date_off", "hour_off", "minute_off"]
+
+
+def _dedupe_for_conflict_key(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Collapse rows that share the same conflict key down to one.
+
+    Postgres can't apply ON CONFLICT DO UPDATE to the same target row twice
+    within a single statement, so a batch with duplicate keys (e.g. an
+    outage logged once when it started, then logged again as a separate row
+    once restored, instead of editing the original) fails outright. When
+    that happens, keep the most complete row per key -- preferring one with
+    Date_On/Hour_On/Minute_On filled in over an incomplete/still-open
+    duplicate. Returns (deduped_df, number_of_rows_collapsed).
+    """
+    before = len(df)
+    has_restoration = df["date_on"].notna() & df["hour_on"].notna() & df["minute_on"].notna()
+    df = df.assign(_has_restoration=has_restoration).sort_values(
+        "_has_restoration", ascending=False, kind="stable"
+    )
+    df = df.drop_duplicates(subset=_CONFLICT_KEY, keep="first").drop(columns=["_has_restoration"])
+    return df, before - len(df)
+
+
+def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> tuple[int, int]:
+    """Shared COPY-into-temp-table + upsert routine, mirrors utils/db.py::upsert_feeder_load.
+
+    Returns (rows_written, duplicate_rows_collapsed).
+    """
     df = df.rename(columns={v: k for k, v in _DISPLAY_ALIASES.items()})
     for col in _OUTAGE_COLUMNS:
         if col not in df.columns:
@@ -194,6 +220,7 @@ def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> int:
         # this must be a clean integer (or truly empty/NULL) before the CSV
         # is built. Int64 (nullable) keeps NaN as NULL instead of "nan"/"6.0".
         df[col] = pd.to_numeric(df[col], errors="coerce").round().astype("Int64")
+    df, duplicates_collapsed = _dedupe_for_conflict_key(df)
 
     engine = get_engine()
     raw_conn = engine.raw_connection()
@@ -214,8 +241,7 @@ def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> int:
         next(buffer)  # skip header
         cur.copy_expert("COPY temp_outages FROM STDIN WITH CSV", buffer)
 
-        update_cols = [c for c in _OUTAGE_COLUMNS if c not in
-                        ("substation", "equipment", "date_off", "hour_off", "minute_off")]
+        update_cols = [c for c in _OUTAGE_COLUMNS if c not in _CONFLICT_KEY]
         cur.execute(f"""
             INSERT INTO outages ({", ".join(_OUTAGE_COLUMNS)}, updated_by)
             SELECT {", ".join(_OUTAGE_COLUMNS)}, %s FROM temp_outages
@@ -227,18 +253,24 @@ def _bulk_upsert(df: pd.DataFrame, updated_by: str | None) -> int:
         affected = cur.rowcount
         cur.execute("DROP TABLE temp_outages")
         raw_conn.commit()
-        return affected
+        return affected, duplicates_collapsed
     finally:
         raw_conn.close()
 
 
-def upsert_outages_bulk(df: pd.DataFrame, updated_by: str | None = None) -> int:
-    """'Append' mode for Upload Data -- upserts every row, leaves unrelated existing rows untouched."""
+def upsert_outages_bulk(df: pd.DataFrame, updated_by: str | None = None) -> tuple[int, int]:
+    """'Append' mode for Upload Data -- upserts every row, leaves unrelated existing rows untouched.
+
+    Returns (rows_written, duplicate_rows_collapsed).
+    """
     return _bulk_upsert(df, updated_by)
 
 
-def replace_all_outages(df: pd.DataFrame, updated_by: str | None = None) -> int:
-    """'Replace' mode for Upload Data -- wipes all existing history, then loads the given rows."""
+def replace_all_outages(df: pd.DataFrame, updated_by: str | None = None) -> tuple[int, int]:
+    """'Replace' mode for Upload Data -- wipes all existing history, then loads the given rows.
+
+    Returns (rows_written, duplicate_rows_collapsed).
+    """
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(text("TRUNCATE outages"))

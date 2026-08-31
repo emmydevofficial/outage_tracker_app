@@ -1846,11 +1846,18 @@ def show_upload(user):
             mode = st.radio("Import mode", ["Replace existing data", "Append to existing data"], horizontal=True)
             if st.button("Confirm Import", type="primary"):
                 if mode.startswith("Append"):
-                    affected = db.upsert_outages_bulk(new, updated_by=user["username"])
+                    affected, duplicates_collapsed = db.upsert_outages_bulk(new, updated_by=user["username"])
                 else:
-                    affected = db.replace_all_outages(new, updated_by=user["username"])
+                    affected, duplicates_collapsed = db.replace_all_outages(new, updated_by=user["username"])
                 load_data.clear()
-                st.success(f"Imported {len(new):,} rows ({mode.split()[0].lower()}, {affected:,} written). Data reloaded.")
+                msg = f"Imported {len(new):,} rows ({mode.split()[0].lower()}, {affected:,} written). Data reloaded."
+                if duplicates_collapsed:
+                    msg += (
+                        f" Note: {duplicates_collapsed:,} row(s) shared the same substation/equipment/"
+                        f"date-off/hour-off/minute-off as another row in this file -- kept the more "
+                        f"complete one (with restoration details) for each."
+                    )
+                st.success(msg)
                 st.rerun()
         except Exception as exc:
             st.error(f"Could not read workbook: {exc}")
