@@ -23,19 +23,20 @@ st.markdown(
     This Streamlit app contains multiple pages (use the left sidebar Pages menu).
 
     Pages included:
-    1. Region Load Analysis
-    2. Station Load Analysis
-    3. Feeder Load Analysis
-    4. Transformer Load
-    5. Outage Analytics
-    6. Reliability KPI Report
-    7. Regional Dashboard
-    8. Upload Feeder Load (33kV feeder hourly load tracking upload)
-    9. Upload Line Load (330/132kV line hourly load tracking upload)
-    10. Upload Transformer Load (transformer hourly load tracking upload)
+    1. Upload Feeder Load (33kV feeder hourly load tracking upload)
+    2. Upload Line Load (330/132kV line hourly load tracking upload)
+    3. Upload Transformer Load (transformer hourly load tracking upload)
+    4. Region Load Analysis
+    5. Station Load Analysis
+    6. Feeder Load Analysis
+    7. Transformer Load
+    8. Outage Analytics
+    9. Reliability KPI Report
+    10. Regional Dashboard
     11. User Management (Super Admin only)
     12. Load Data Management (delete feeder/line/transformer load by date and region)
     13. Activity Log (Super Admin only: audit trail + uploaded files directory)
+    14. Tariff Settings (Super Admin only: outage-hour exceedance cost rates)
 
     The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
     `db.py` and `pdf_generator.py`.

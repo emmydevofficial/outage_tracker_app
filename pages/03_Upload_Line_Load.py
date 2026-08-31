@@ -1,17 +1,18 @@
 """
-### FILE: pages/12_Upload_Feeder_Load.py
-Upload the DISCO (33kV Feeder) Load Management Tracking sheet for a region
-and upsert it into the feeder_33kv_load table. Region is read from the sheet
-itself (cell A1), so the same page handles any region's file.
+### FILE: pages/03_Upload_Line_Load.py
+Upload the (330/132kV LINE) Load Management Tracking sheet for a region and
+upsert it into the line_load table. Region is read from the sheet itself
+(cell A1), so the same page handles any region's file.
 
 Sheet layout expected:
   A1            merged region name (e.g. "OSOGBO")
-  Row 2, M:AJ   hourly time headers ("01:00" .. "24:00")
+  Row 2, L:AI   hourly time headers ("01:00" .. "24:00")
   Column B      ACC (vertically merged across rows sharing the same ACC)
-  Column C      Station / Transmission Interface (vertically merged)
-  Column F      33kV feeder name (one row per feeder)
-  Column L      Customer / Disco
-  Row 3..end, M:AJ   hourly load readings for that feeder
+  Column C      Transmission Interface (vertically merged)
+  Column D      Line Voltage (vertically merged)
+  Column E      Line Nomenclature (one row per line)
+  Column K      Disco
+  Row 3..end, L:AI   hourly load readings for that line
 """
 
 import streamlit as st
@@ -21,31 +22,32 @@ login()
 
 import pandas as pd
 from openpyxl import load_workbook
-from utils.db import upsert_feeder_load, read_feeder_load
+from utils.db import upsert_line_load, read_line_load
 from utils.load_upload import build_merge_fill_map, normalize_time_header, classify_cell
 from utils.regions import normalize_region
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
 from utils.branding import inject_css, page_header, kpi_card, kpi_grid, one_indexed
 
-st.set_page_config(page_title="Upload Feeder Load", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Upload Line Load", page_icon="⚡", layout="wide")
 inject_css()
-page_header("Upload 33kV Feeder Load Tracking", "33kV Feeder Network · Data Ingestion")
+page_header("Upload 330/132kV Line Load Tracking", "33kV Feeder Network · Data Ingestion")
 st.markdown(
-    "Upload the hourly DISCO (33kV Feeder) Load Management Tracking sheet for a single region/date. "
+    "Upload the hourly (330/132kV LINE) Load Management Tracking sheet for a single region/date. "
     "The region is read from the sheet itself, so this works for any region's file."
 )
 
-ACC_COL = 2         # column B
-STATION_COL = 3     # column C
-FEEDER_COL = 6      # column F
-CUSTOMER_COL = 12   # column L
-FIRST_HOUR_COL = 13  # column M
-LAST_HOUR_COL = 36   # column AJ
+ACC_COL = 2                      # column B
+TRANSMISSION_INTERFACE_COL = 3   # column C
+LINE_VOLTAGE_COL = 4             # column D
+LINE_NOMENCLATURE_COL = 5        # column E
+DISCO_COL = 11                   # column K
+FIRST_HOUR_COL = 12              # column L
+LAST_HOUR_COL = 35               # column AI
 DATA_START_ROW = 3
 
 reading_date = st.date_input("Reading Date")
-uploaded = st.file_uploader("Choose Feeder Load Excel file", type=["xlsx", "xlsm"])
+uploaded = st.file_uploader("Choose Line Load Excel file", type=["xlsx", "xlsm"])
 
 if uploaded is not None:
     try:
@@ -71,26 +73,29 @@ if uploaded is not None:
         for col in range(FIRST_HOUR_COL, LAST_HOUR_COL + 1)
     ]
     if any(not h for h in hour_headers):
-        st.error("One or more hourly column headers (row 2, columns M:AJ) are blank or unreadable.")
+        st.error("One or more hourly column headers (row 2, columns L:AI) are blank or unreadable.")
         st.stop()
 
     area_by_row = build_merge_fill_map(ws, ACC_COL, ws.max_row)
-    station_by_row = build_merge_fill_map(ws, STATION_COL, ws.max_row)
+    interface_by_row = build_merge_fill_map(ws, TRANSMISSION_INTERFACE_COL, ws.max_row)
+    voltage_by_row = build_merge_fill_map(ws, LINE_VOLTAGE_COL, ws.max_row)
 
     rows = []
     kinds = []
     for r in range(DATA_START_ROW, ws.max_row + 1):
-        feeder = ws.cell(row=r, column=FEEDER_COL).value
-        if feeder is None or str(feeder).strip() == "":
+        line_nomenclature = ws.cell(row=r, column=LINE_NOMENCLATURE_COL).value
+        if line_nomenclature is None or str(line_nomenclature).strip() == "":
             continue
-        feeder = str(feeder).strip()
+        line_nomenclature = str(line_nomenclature).strip()
 
         area = area_by_row.get(r)
         area = str(area).strip() if area is not None else None
-        station = station_by_row.get(r)
-        station = str(station).strip() if station is not None else None
-        customer = ws.cell(row=r, column=CUSTOMER_COL).value
-        customer = str(customer).strip() if customer is not None else None
+        transmission_interface = interface_by_row.get(r)
+        transmission_interface = str(transmission_interface).strip() if transmission_interface is not None else None
+        line_voltage = voltage_by_row.get(r)
+        line_voltage = str(line_voltage).strip() if line_voltage is not None else None
+        disco = ws.cell(row=r, column=DISCO_COL).value
+        disco = str(disco).strip() if disco is not None else None
 
         for i, col in enumerate(range(FIRST_HOUR_COL, LAST_HOUR_COL + 1)):
             raw = ws.cell(row=r, column=col).value
@@ -100,16 +105,17 @@ if uploaded is not None:
                 "reading_time": hour_headers[i],
                 "region": region,
                 "area": area,
-                "feeder": feeder,
-                "customer": customer,
-                "station": station,
+                "transmission_interface": transmission_interface,
+                "disco": disco,
+                "line_voltage": line_voltage,
+                "line_nomenclature": line_nomenclature,
                 "load_mw": load_mw,
                 "cause": cause,
             })
             kinds.append(kind)
 
     if not rows:
-        st.warning("No feeder rows found in the uploaded sheet (column F was empty throughout).")
+        st.warning("No line rows found in the uploaded sheet (column E was empty throughout).")
         st.stop()
 
     df = pd.DataFrame(rows)
@@ -127,7 +133,7 @@ if uploaded is not None:
     if not flagged.empty:
         with st.expander(f"View {len(flagged):,} flagged reading(s) (fault codes + wrong data format)"):
             st.dataframe(
-                one_indexed(flagged[["area", "station", "feeder", "customer", "reading_time", "cause"]]),
+                one_indexed(flagged[["area", "transmission_interface", "line_voltage", "line_nomenclature", "disco", "reading_time", "cause"]]),
                 use_container_width=True,
                 height=300,
             )
@@ -135,16 +141,16 @@ if uploaded is not None:
     st.subheader("Preview (first 50 rows)")
     st.dataframe(one_indexed(df.head(50)), use_container_width=True)
     st.caption(
-        "Re-uploading the same reading_date/reading_time/station/feeder combination "
-        "will update the existing row instead of creating a duplicate."
+        "Re-uploading the same reading_date/reading_time/transmission_interface/line_nomenclature "
+        "combination will update the existing row instead of creating a duplicate."
     )
 
     if st.button("Upload to database", type="primary"):
         try:
-            upsert_feeder_load(df)
-            read_feeder_load.clear()
-            st.success(f"{len(df):,} feeder load reading(s) for {region} on {reading_date} uploaded successfully.")
-            save_uploaded_file(uploaded, "Upload Feeder Load", region)
-            log_activity("upload_feeder_load", f"Uploaded '{uploaded.name}' — {len(df):,} reading(s) for {region} on {reading_date}")
+            upsert_line_load(df)
+            read_line_load.clear()
+            st.success(f"{len(df):,} line load reading(s) for {region} on {reading_date} uploaded successfully.")
+            save_uploaded_file(uploaded, "Upload Line Load", region)
+            log_activity("upload_line_load", f"Uploaded '{uploaded.name}' — {len(df):,} reading(s) for {region} on {reading_date}")
         except Exception as e:
             st.error(f"Error inserting records: {e}")

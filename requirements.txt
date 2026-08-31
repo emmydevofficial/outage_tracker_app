@@ -13,3 +13,5 @@ pillow
 python-pptx
 openpyxl
 xlsxwriter
+itsdangerous
+streamlit-cookies-controller

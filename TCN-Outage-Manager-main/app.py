@@ -1,14 +1,15 @@
 """TCN Grid Outage Manager — 330kV / 132kV Equipment Outage Analytics.
 
-Rebuilt around TCN_330kV_132kV_Outages_Compiled.xlsx:
-Region | SubRegion_ACC | Substation | Equipment | Date_Off | Hour_Off | Minute_Off |
-Date_On | Hour_On | Minute_On | Duration | Class | Last_Load_MW | Event_Indication |
+Accounts and outage records live in a Postgres database (db.py,
+DATABASE_330_URL) -- a separate database from the 33kV Load & Outage
+Analytics app, so the two apps' data stay fully independent. The outages
+table columns: Region | SubRegion_ACC | Substation | Equipment | Date_Off |
+Hour_Off | Minute_Off | Date_On | Hour_On | Minute_On | Duration | Class |
+Last_Load_MW | Event_Indication | Officer_Interruption | Officer_Restoration |
 Party_Responsible | Weather_Condition | Remarks
 """
 
 import base64
-import hashlib
-import json
 import os
 import re
 import time
@@ -25,16 +26,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import db
+from session_cookie import issue_session_cookie, read_session_username, clear_session_cookie
+
 # ──────────────────────────────────────────────────────────────
 # Paths & constants
 # ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
-DATA_FILE = BASE_DIR / "TCN_330kV_132kV_Outages_Compiled.xlsx"
 HIERARCHY_FILE = BASE_DIR / "Complete List of Substation.xlsx"
 CATALOG_330_FILE = BASE_DIR / "330kV Transformers and Lines.xlsx"
 CATALOG_132_FILE = BASE_DIR / "132kV Transformesr Capacity and 33kV Feeders - Copy.xlsx"
 STATION_MAP_FILE = BASE_DIR / "station_region_map.csv"
-USERS_FILE = BASE_DIR / "users.json"
 LOGIN_BG = BASE_DIR / "login_bg.png"
 APP_BG = BASE_DIR / "tcn_background.png"
 LOGO = BASE_DIR / "tcn_logo.png"
@@ -84,10 +86,6 @@ def _b64(path: Path) -> str:
         return base64.b64encode(path.read_bytes()).decode()
     except Exception:
         return ""
-
-
-def _hash(pw: str) -> str:
-    return hashlib.sha256(pw.encode()).hexdigest()
 
 
 def _style_chart(fig):
@@ -389,17 +387,8 @@ def inject_css():
 # ──────────────────────────────────────────────────────────────
 # Auth
 # ──────────────────────────────────────────────────────────────
-def load_users():
-    if USERS_FILE.exists():
-        return json.loads(USERS_FILE.read_text())
-    users = {"admin": {"password": _hash("admin123"), "role": "admin",
-                       "name": "Administrator", "region": None}}
-    USERS_FILE.write_text(json.dumps(users, indent=2))
-    return users
-
-
-def save_users(users):
-    USERS_FILE.write_text(json.dumps(users, indent=2))
+# Accounts now live in the database (db.py) -- see authenticate()/get_user()/
+# list_users()/create_user()/delete_user() calls throughout this file.
 
 
 def login_page():
@@ -541,16 +530,15 @@ def login_page():
         if submitted:
             with st.spinner("🔐 Verifying credentials..."):
                 start = time.monotonic()
-                users = load_users()
-                u = users.get(username.strip())
-                ok = bool(u and u["password"] == _hash(password))
+                ok = db.authenticate(username.strip(), password)
                 # guarantee the spinner is on screen long enough to notice,
-                # even though local file-based auth resolves near-instantly
+                # even though auth resolves near-instantly
                 remaining = 0.5 - (time.monotonic() - start)
                 if remaining > 0:
                     time.sleep(remaining)
             if ok:
-                st.session_state.user = {"username": username.strip(), **{k: v for k, v in u.items() if k != "password"}}
+                st.session_state.user = db.get_user(username.strip())
+                issue_session_cookie(username.strip())
                 st.rerun()
             else:
                 st.error("Invalid username or password")
@@ -771,8 +759,7 @@ def _equip_type(e):
 
 @st.cache_data(show_spinner="Loading outage data…")
 def load_data():
-    df = pd.read_excel(DATA_FILE, sheet_name=0)
-    df.columns = [c.strip() for c in df.columns]
+    df = db.read_outages()
 
     df["Duration_Hours"] = df["Duration"].map(_parse_duration)
     df["Datetime_Off"] = (
@@ -965,6 +952,7 @@ def sidebar_filters(df, user):
             unsafe_allow_html=True,
         )
         if st.button("Logout", type="primary"):
+            clear_session_cookie()
             st.session_state.pop("user", None)
             st.rerun()
 
@@ -998,7 +986,11 @@ def sidebar_filters(df, user):
         regions_all = sorted(df["Region"].dropna().unique())
         if user["region"]:
             regions = [user["region"]]
-            st.multiselect("🌍 Region", regions_all, default=regions, disabled=True, key="flt_region")
+            st.multiselect(
+                "🌍 Region", regions_all,
+                default=[r for r in regions if r in regions_all],
+                disabled=True, key="flt_region",
+            )
         else:
             regions = st.multiselect("🌍 Region", regions_all, default=regions_all, key="flt_region")
 
@@ -1756,14 +1748,9 @@ def show_report_outage(user):
                 "Remarks": remarks.strip() or None,
             }
             try:
-                existing = pd.read_excel(DATA_FILE, sheet_name=0)
-                combined = pd.concat([existing, pd.DataFrame([row])], ignore_index=True)
-                with pd.ExcelWriter(DATA_FILE, engine="openpyxl") as writer:
-                    combined.to_excel(writer, sheet_name="Outages", index=False)
+                db.upsert_outage(row, updated_by=user["username"])
                 load_data.clear()
                 st.success(f"Outage recorded for {row['Equipment']} at {row['Substation']} ({region}).")
-            except PermissionError:
-                st.error("Data file is open in Excel — close it and submit again.")
             except Exception as exc:
                 st.error(f"Could not save record: {exc}")
 
@@ -1833,14 +1820,16 @@ def show_export(df):
     st.dataframe(summary, use_container_width=True)
 
 
-def show_upload():
+def show_upload(user):
     _eyebrow("Admin", "#FBEAEA", TCN_RED)
     st.header("Upload Data")
     st.caption(
-        "Replace the compiled outage dataset. The file must contain the standard columns: "
+        "Import outages into the database. The file must contain the standard columns: "
         "Region, SubRegion_ACC, Substation, Equipment, Date_Off, Hour_Off, Minute_Off, "
         "Date_On, Hour_On, Minute_On, Duration, Class, Last_Load_MW, Event_Indication, "
-        "Party_Responsible, Weather_Condition, Remarks"
+        "Party_Responsible, Weather_Condition, Remarks. Re-uploading the same "
+        "substation/equipment/date-off/hour-off/minute-off updates that record instead "
+        "of duplicating it."
     )
     up = st.file_uploader("Upload compiled outages workbook (.xlsx)", type=["xlsx"])
     if up is not None:
@@ -1857,14 +1846,11 @@ def show_upload():
             mode = st.radio("Import mode", ["Replace existing data", "Append to existing data"], horizontal=True)
             if st.button("Confirm Import", type="primary"):
                 if mode.startswith("Append"):
-                    existing = pd.read_excel(DATA_FILE, sheet_name=0)
-                    combined = pd.concat([existing, new], ignore_index=True)
+                    affected = db.upsert_outages_bulk(new, updated_by=user["username"])
                 else:
-                    combined = new
-                with pd.ExcelWriter(DATA_FILE, engine="openpyxl") as writer:
-                    combined.to_excel(writer, sheet_name="Outages", index=False)
+                    affected = db.replace_all_outages(new, updated_by=user["username"])
                 load_data.clear()
-                st.success(f"Imported {len(new):,} rows ({mode.split()[0].lower()}). Data reloaded.")
+                st.success(f"Imported {len(new):,} rows ({mode.split()[0].lower()}, {affected:,} written). Data reloaded.")
                 st.rerun()
         except Exception as exc:
             st.error(f"Could not read workbook: {exc}")
@@ -1873,11 +1859,14 @@ def show_upload():
 def show_users(user):
     _eyebrow("Admin", "#FBEAEA", TCN_RED)
     st.header("User Management")
-    users = load_users()
+    users_df = db.list_users()
 
-    rows = [{"Username": k, "Name": v["name"], "Role": v["role"], "Region": v["region"] or "All"}
-            for k, v in users.items()]
-    st.dataframe(pd.DataFrame(rows), use_container_width=True)
+    display_df = users_df.copy()
+    display_df["region"] = display_df["region"].fillna("All")
+    st.dataframe(
+        display_df.rename(columns={"username": "Username", "name": "Name", "role": "Role", "region": "Region"}),
+        use_container_width=True,
+    )
 
     st.subheader("Add User")
     with st.form("add_user"):
@@ -1892,24 +1881,22 @@ def show_users(user):
         if st.form_submit_button("Create User", type="primary"):
             if not uname or not pw:
                 st.error("Username and password are required.")
-            elif uname in users:
+            elif uname.strip() in users_df["username"].values:
                 st.error("Username already exists.")
             else:
-                users[uname.strip()] = {
-                    "password": _hash(pw), "role": role, "name": name or uname,
-                    "region": None if region == "All" or role == "admin" else region,
-                }
-                save_users(users)
+                db.create_user(
+                    uname.strip(), db.hash_password(pw), name or uname, role,
+                    None if region == "All" or role == "admin" else region,
+                )
                 st.success(f"User '{uname}' created.")
                 st.rerun()
 
     st.subheader("Delete User")
-    deletable = [u for u in users if u != user["username"]]
+    deletable = [u for u in users_df["username"] if u != user["username"]]
     if deletable:
         target = st.selectbox("Select user", deletable)
         if st.button("Delete User"):
-            users.pop(target, None)
-            save_users(users)
+            db.delete_user(target)
             st.success(f"User '{target}' deleted.")
             st.rerun()
 
@@ -1921,10 +1908,24 @@ def main():
     inject_css()
 
     if "user" not in st.session_state:
+        # Fresh tab/session -- before showing the login form, check whether a
+        # valid session cookie already proves who this is (shared across
+        # every tab of the same browser).
+        cookie_username = read_session_username()
+        if cookie_username:
+            u = db.get_user(cookie_username)
+            if u:
+                st.session_state.user = u
+
+    if "user" not in st.session_state:
         login_page()
         return
 
     user = st.session_state.user
+    # sliding expiry: every active render while logged in resets the
+    # cookie's ~1 hour window, so an actively-used session never times out;
+    # only real inactivity does.
+    issue_session_cookie(user["username"])
     logo64 = _b64(LOGO)
     logo_html = (
         f'<div style="width:52px;height:52px;border-radius:13px;display:flex;align-items:center;'
@@ -1945,45 +1946,30 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    if not DATA_FILE.exists():
-        if user["role"] == "admin":
-            st.warning(f"Data file not found: {DATA_FILE.name}. Upload it below to get started.")
-            show_upload()
-        else:
-            st.error(f"Data file not found: {DATA_FILE.name}. Ask an admin to upload it.")
-        return
-
     df = load_data()
     if user.get("region"):
         df = df[df["Region"] == user["region"]]
 
     filtered = sidebar_filters(df, user)
 
-    tab_names = ["⚡ Dashboard", "🗂️ Records", "🌍 Region Analysis", "🔧 Equipment Analysis",
-                 "📝 Report Outage", "🗼 Network Hierarchy", "📤 Export"]
+    tab_specs = [("📝 Report Outage", lambda: show_report_outage(user))]
     if user["role"] == "admin":
-        tab_names += ["📁 Upload Data", "👥 Users"]
-    tabs = st.tabs(tab_names)
+        tab_specs.append(("📁 Upload Data", lambda: show_upload(user)))
+    tab_specs += [
+        ("⚡ Dashboard", lambda: show_dashboard(filtered, user)),
+        ("🗂️ Records", lambda: show_records(filtered)),
+        ("🌍 Region Analysis", lambda: show_region_analysis(filtered)),
+        ("🔧 Equipment Analysis", lambda: show_equipment_analysis(filtered)),
+        ("🗼 Network Hierarchy", lambda: show_hierarchy(filtered)),
+        ("📤 Export", lambda: show_export(filtered)),
+    ]
+    if user["role"] == "admin":
+        tab_specs.append(("👥 Users", lambda: show_users(user)))
 
-    with tabs[0]:
-        show_dashboard(filtered, user)
-    with tabs[1]:
-        show_records(filtered)
-    with tabs[2]:
-        show_region_analysis(filtered)
-    with tabs[3]:
-        show_equipment_analysis(filtered)
-    with tabs[4]:
-        show_report_outage(user)
-    with tabs[5]:
-        show_hierarchy(filtered)
-    with tabs[6]:
-        show_export(filtered)
-    if user["role"] == "admin":
-        with tabs[7]:
-            show_upload()
-        with tabs[8]:
-            show_users(user)
+    tabs = st.tabs([label for label, _ in tab_specs])
+    for tab, (_, render_fn) in zip(tabs, tab_specs):
+        with tab:
+            render_fn()
 
 
 if __name__ == "__main__":

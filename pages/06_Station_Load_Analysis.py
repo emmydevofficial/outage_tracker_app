@@ -1,5 +1,5 @@
 """
-### FILE: pages/2_Station_Load_Analysis.py
+### FILE: pages/06_Station_Load_Analysis.py
 Station-level analysis
 """
 
@@ -8,7 +8,7 @@ from utils.auth import login, filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 
 login()
@@ -53,6 +53,30 @@ kpi_grid([
     kpi_card("Feeders", f"{unique_station}", "", "building", "#956400"),
 ])
 st.caption(f"Max at {max_date} {max_time} · Min at {min_date} {min_time}")
+
+# calculate max/min for each feeder under selected station
+if not station_df.empty:
+    details = []
+    for feeder, df_feeder in station_df.groupby("feeder_33kv"):
+        max_idx = df_feeder['load_mw'].idxmax()
+        min_idx = df_feeder['load_mw'].idxmin()
+        max_row = df_feeder.loc[max_idx, ['load_mw', 'reading_date', 'reading_time']]
+        min_row = df_feeder.loc[min_idx, ['load_mw', 'reading_date', 'reading_time']]
+        # always convert to str; this handles Timestamp/NaT or other
+        # types and avoids displaying 'None'.
+        max_time = str(max_row['reading_time']) if pd.notna(max_row['reading_time']) else ''
+        min_time = str(min_row['reading_time']) if pd.notna(min_row['reading_time']) else ''
+        details.append([
+            feeder,
+            max_row['load_mw'], max_row['reading_date'], max_time,
+            min_row['load_mw'], min_row['reading_date'], min_time,
+        ])
+    df_feeder_ext = pd.DataFrame(details, columns=[
+        'feeder', 'max_load', 'max_date', 'max_time',
+        'min_load', 'min_date', 'min_time'
+    ]).sort_values('max_load', ascending=False)
+    st.subheader('Per-feeder load extremes')
+    st.dataframe(one_indexed(df_feeder_ext), use_container_width=True)
 
 # plot hourly
 station_hourly = station_df.groupby(["reading_time"])["load_mw"].sum().reset_index()

@@ -8,6 +8,7 @@ import bcrypt
 from .db import get_engine, get_user_role_and_region
 from .activity_log import log_activity
 from .branding import render_login_screen
+from .session_cookie import issue_session_cookie, read_session_username, clear_session_cookie
 
 TCN_OUTAGE_MANAGER_URL = os.getenv("TCN_OUTAGE_MANAGER_URL", "http://93.127.137.148:8502")
 
@@ -67,6 +68,21 @@ def login():
         st.session_state.role = None
         st.session_state.region = None
 
+    if not st.session_state.logged_in:
+        # Fresh tab/session -- before showing the login form, check whether a
+        # valid session cookie already proves who this is (shared across every
+        # tab of the same browser). Role/region are re-fetched fresh from the
+        # database rather than trusted from the cookie, so a demoted or
+        # deleted account takes effect immediately.
+        cookie_username = read_session_username()
+        if cookie_username:
+            role, region = get_user_role_and_region(cookie_username)
+            if role:
+                st.session_state.logged_in = True
+                st.session_state.username = cookie_username
+                st.session_state.role = role
+                st.session_state.region = region
+
     if st.session_state.logged_in:
         region_label = st.session_state.get("region") or "All Regions"
         role_label = "Super Admin" if st.session_state.get("role") == "super_admin" else "Regional User"
@@ -77,6 +93,7 @@ def login():
         # optionally provide a logout button
         if st.sidebar.button("Logout"):
             log_activity("logout")
+            clear_session_cookie()
             st.session_state.logged_in = False
             st.session_state.username = None
             st.session_state.role = None
@@ -86,6 +103,11 @@ def login():
                 st.rerun()
             except Exception:
                 pass
+        else:
+            # sliding expiry: every active render while logged in resets the
+            # cookie's ~1 hour window, so an actively-used session never
+            # times out; only real inactivity does.
+            issue_session_cookie(st.session_state.username)
         return
 
     def _verify(u, p):
@@ -103,6 +125,7 @@ def login():
             st.session_state.username = username
             st.session_state.role = role
             st.session_state.region = region
+            issue_session_cookie(username)
             log_activity("login")
             try:
                 st.rerun()

@@ -1,5 +1,5 @@
 """
-### FILE: pages/6_Reliability_KPI_Report.py
+### FILE: pages/10_Reliability_KPI_Report.py
 Computes SAIDI, SAIFI, CAIDI approximations. Requires customers served per station to compute accurate indices.
 This sample assumes a 'customers' column is NOT available, so it shows station-level outage summary.
 """
@@ -7,8 +7,9 @@ This sample assumes a 'customers' column is NOT available, so it shows station-l
 import streamlit as st
 from utils.auth import login, filter_to_user_region
 import pandas as pd
-from utils.db import read_outages, read_tcn_sla_compliance
-from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
+from utils.db import read_outages, read_tcn_sla_compliance, read_tariff_rates, read_tariff_settings
+from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed, kpi_card, kpi_grid
+from utils.tariff import get_tariff_rate
 from datetime import date, timedelta
 import plotly.express as px
 
@@ -217,6 +218,82 @@ styler = filtered.style.map(
 )
 
 st.dataframe(styler)
+
+st.subheader("💰 TCN Outage Hours Exceedance — Estimated Cost")
+st.caption(
+    "Stations/feeders where TCN has used more than its allotted outage-hour "
+    "budget. Cost is estimated using each outage event's own recorded load, "
+    "counting only the hours after TCN's budget was exhausted -- not a flat "
+    "multiply of the whole period's load loss."
+)
+
+exceedance_df = feeder_party_pivot[feeder_party_pivot['available_outage_hours_tcn'] < 0].copy()
+
+if exceedance_df.empty:
+    st.info("No station/feeder exceeded TCN's outage-hour budget for this period.")
+else:
+    tcn_events = out_df[out_df['party_responsible'] == 'TCN'].sort_values(['clipped_start', 'id'])
+    grouped_events = {key: g for key, g in tcn_events.groupby(['station', 'feeder_33kv'])}
+
+    def _excess_load_loss_mwh(station, feeder, max_hours):
+        group = grouped_events.get((station, feeder))
+        if group is None or group.empty:
+            return 0.0
+        running = 0.0
+        excess_mwh = 0.0
+        for _, ev in group.iterrows():
+            hours = ev['duration_hr_clipped']
+            hours = 0.0 if pd.isna(hours) else float(hours)
+            load = ev['last_load']
+            load = 0.0 if pd.isna(load) else float(load)
+            new_running = running + hours
+            if running >= max_hours:
+                excess_this = hours
+            elif new_running > max_hours:
+                excess_this = new_running - max_hours
+            else:
+                excess_this = 0.0
+            excess_mwh += excess_this * load
+            running = new_running
+        return excess_mwh
+
+    exceedance_df['excess_hours'] = -exceedance_df['available_outage_hours_tcn']
+    exceedance_df['excess_load_loss_mwh'] = exceedance_df.apply(
+        lambda r: _excess_load_loss_mwh(r['station'], r['feeder_33kv'], r['max_hours_tcn']), axis=1
+    )
+    exceedance_df['excess_load_loss_kwh'] = exceedance_df['excess_load_loss_mwh'] * 1000
+
+    # rate varies by disco + feeder band (fetched once, then looked up per row)
+    _rates_df = read_tariff_rates()
+    _default_rate = read_tariff_settings()
+    exceedance_df['tariff_rate_ngn_per_kwh'] = exceedance_df.apply(
+        lambda r: get_tariff_rate(r.get('disco'), r.get('feeder_band'), _rates_df, _default_rate), axis=1
+    )
+    exceedance_df['estimated_cost_ngn'] = exceedance_df['excess_load_loss_kwh'] * exceedance_df['tariff_rate_ngn_per_kwh']
+
+    total_cost = exceedance_df['estimated_cost_ngn'].sum()
+    kpi_grid([
+        kpi_card("Feeders Over Budget", f"{len(exceedance_df)}", "", "alert", "#c81e28"),
+        kpi_card("Total Excess Hours", f"{exceedance_df['excess_hours'].sum():.1f}", "hrs", "clock", "#956400"),
+        kpi_card("Total Excess Load Loss", f"{exceedance_df['excess_load_loss_mwh'].sum():.2f}", "MWh", "bolt", "#1e3a7a"),
+        kpi_card("Estimated Total Cost", f"₦{total_cost:,.2f}", "", "chart", "#c81e28"),
+    ])
+
+    display_df = exceedance_df[[
+        'station', 'feeder_33kv', 'total_outage_hour_TCN', 'max_hours_tcn',
+        'excess_hours', 'excess_load_loss_mwh', 'tariff_rate_ngn_per_kwh', 'estimated_cost_ngn',
+    ]].rename(columns={
+        'station': 'Station', 'feeder_33kv': 'Feeder',
+        'total_outage_hour_TCN': 'TCN Outage Hours', 'max_hours_tcn': 'TCN Budget (hrs)',
+        'excess_hours': 'Excess Hours', 'excess_load_loss_mwh': 'Excess Load Loss (MWh)',
+        'tariff_rate_ngn_per_kwh': 'Tariff Rate (₦/kWh)', 'estimated_cost_ngn': 'Estimated Cost (₦)',
+    }).sort_values('Estimated Cost (₦)', ascending=False)
+
+    st.dataframe(one_indexed(display_df), use_container_width=True)
+    st.caption(
+        f"Rates vary by disco + feeder band -- manage under Tariff Settings (Super Admin). "
+        f"Global default: ₦{_default_rate:,.2f}/kWh."
+    )
 
 fig = px.bar(feeder_summary.head(20), x='feeder_33kv', y='outage_hrs', title='Top feeders by total outage minutes', color_discrete_sequence=TCN_COLORS)
 fig.update_layout(**TCN_CHART_LAYOUT)

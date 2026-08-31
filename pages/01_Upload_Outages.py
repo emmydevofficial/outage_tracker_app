@@ -1,5 +1,5 @@
 """
-### FILE: pages/7_Upload_Outages.py
+### FILE: pages/01_Upload_Outages.py
 Utility page that allows the user to upload a CSV file containing outage
 records and push the rows into the PostgreSQL ``outages`` table.  The
 uploader expects the CSV to follow the layout described in the project

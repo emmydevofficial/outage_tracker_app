@@ -722,11 +722,70 @@ def insert_outages_from_csv(csv_path: str) -> None:
 def read_tcn_sla_compliance() -> pd.DataFrame:
     """Return the TCN SLA compliance table with per-day outage limits.
 
-    Columns: station, feeder_name, maximum_outage_hours
+    Columns: station, feeder_name, maximum_outage_hours, disco, feeder_band
     """
     engine = get_engine()
     query = text("""
-        SELECT station, feeder_name, maximum_outage_hours
+        SELECT station, feeder_name, maximum_outage_hours, disco, feeder_band
         FROM tcn_sla_compliance
     """)
     return pd.read_sql_query(query, engine)
+
+
+# -----------------------------
+# TARIFF (outage-hour exceedance cost) HELPERS
+# -----------------------------
+
+@st.cache_data(ttl=300)
+def read_tariff_settings() -> float:
+    """The single global default tariff rate (Naira/kWh)."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        rate = conn.execute(text("SELECT default_rate_ngn_per_kwh FROM tariff_settings WHERE id = 1")).scalar()
+    return float(rate) if rate is not None else 206.50
+
+
+@st.cache_data(ttl=300)
+def read_tariff_rates() -> pd.DataFrame:
+    """Every explicit (disco, band) -> rate override. Columns: disco, band, rate_ngn_per_kwh, updated_at, updated_by."""
+    engine = get_engine()
+    query = text("""
+        SELECT disco, band, rate_ngn_per_kwh, updated_at, updated_by
+        FROM tariff_rates
+        ORDER BY disco, band
+    """)
+    return pd.read_sql_query(query, engine)
+
+
+@st.cache_data(ttl=300)
+def list_known_discos() -> list:
+    """Every disco that appears in the SLA table, for the tariff settings grid."""
+    engine = get_engine()
+    query = text("SELECT DISTINCT disco FROM tcn_sla_compliance WHERE disco IS NOT NULL AND disco <> '' ORDER BY disco")
+    with engine.connect() as conn:
+        return [r[0] for r in conn.execute(query).fetchall()]
+
+
+def update_tariff_settings(rate: float, updated_by: str | None) -> None:
+    """Update the single global default tariff rate."""
+    engine = get_engine()
+    query = text("""
+        UPDATE tariff_settings
+        SET default_rate_ngn_per_kwh = :rate, updated_at = now(), updated_by = :updated_by
+        WHERE id = 1
+    """)
+    with engine.begin() as conn:
+        conn.execute(query, {"rate": rate, "updated_by": updated_by})
+
+
+def upsert_tariff_rate(disco: str, band: str, rate: float, updated_by: str | None) -> None:
+    """Insert or update the rate for a single (disco, band) combination."""
+    engine = get_engine()
+    query = text("""
+        INSERT INTO tariff_rates (disco, band, rate_ngn_per_kwh, updated_at, updated_by)
+        VALUES (:disco, :band, :rate, now(), :updated_by)
+        ON CONFLICT (disco, band) DO UPDATE
+        SET rate_ngn_per_kwh = EXCLUDED.rate_ngn_per_kwh, updated_at = now(), updated_by = EXCLUDED.updated_by
+    """)
+    with engine.begin() as conn:
+        conn.execute(query, {"disco": disco, "band": band, "rate": rate, "updated_by": updated_by})
