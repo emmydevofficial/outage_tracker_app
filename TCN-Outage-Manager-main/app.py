@@ -12,8 +12,9 @@ Party_Responsible | Weather_Condition | Remarks
 import base64
 import os
 import re
+import tempfile
 import time
-from datetime import timedelta
+from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
 
@@ -27,6 +28,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import db
+from narrative_report import (
+    build_at_a_glance,
+    build_highlights,
+    build_region_sections,
+    build_still_open_section,
+    generate_narrative_word_report,
+    generate_narrative_pdf_report,
+)
 from session_cookie import issue_session_cookie, read_session_username, clear_session_cookie
 
 # ──────────────────────────────────────────────────────────────
@@ -1908,6 +1917,140 @@ def show_users(user):
             st.rerun()
 
 
+def show_daily_report(df, user):
+    """"Short story" style summary of one day's outages, region-scoped the
+    same way `df` already is by the time it reaches here (see main()).
+    Uses `df` -- not the sidebar-filtered `filtered` -- so the still-open
+    carry-over section isn't accidentally bounded by the sidebar's date
+    filter; this tab has its own date picker instead."""
+    _eyebrow("Daily Report", "#E8EEF7", "#2952A3")
+    st.header("Daily Outage Report")
+    st.caption("Pick a date to generate a short-story style summary of that day's outages.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        report_date = st.date_input("Report date", value=date.today(), key="tcn_narrative_report_date")
+    with col2:
+        if not user.get("region"):
+            region_options = ["All Regions"] + sorted(df["Region"].dropna().unique().tolist())
+            selected_region = st.selectbox("Region", options=region_options, key="tcn_narrative_report_region")
+        else:
+            selected_region = user["region"]
+            st.text_input("Region", value=selected_region, disabled=True)
+    with col3:
+        party_options = ["All"] + sorted(df["Party_Responsible"].dropna().unique().tolist())
+        default_party_idx = party_options.index("TCN") if "TCN" in party_options else 0
+        selected_party = st.selectbox(
+            "Party Responsible", options=party_options, index=default_party_idx, key="tcn_narrative_report_party"
+        )
+
+    day_df = df[df["Datetime_Off"].dt.date == report_date]
+    open_df = df[df["Status"] == "Ongoing"]
+
+    if selected_region and selected_region != "All Regions":
+        day_df = day_df[day_df["Region"] == selected_region]
+        open_df = open_df[open_df["Region"] == selected_region]
+
+    if selected_party != "All":
+        day_df = day_df[day_df["Party_Responsible"] == selected_party]
+        open_df = open_df[open_df["Party_Responsible"] == selected_party]
+
+    at_a_glance = build_at_a_glance(day_df, open_df)
+    highlights = build_highlights(day_df, top_n=4)
+    region_sections = build_region_sections(day_df)
+    still_open_lines = build_still_open_section(open_df)
+
+    st.divider()
+    st.subheader("📊 At a Glance")
+    class_counts = at_a_glance["class_counts"]
+    class_line = ", ".join(f"**{k}:** {v}" for k, v in class_counts.items()) or "No events recorded"
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Events", at_a_glance["total_events"])
+    c2.metric("Regions Covered", len(at_a_glance["regions_covered"]))
+    c3.metric("Still Open (all dates)", at_a_glance["still_open_count"])
+    st.markdown(f"**Breakdown:** {class_line}")
+    st.markdown(f"**Lowest Recorded Frequency:** {at_a_glance['lowest_frequency']}")
+    st.markdown(f"**New Assets Energised:** {at_a_glance['new_assets_energised']}")
+
+    st.divider()
+    st.subheader("📰 System Observations")
+    if highlights:
+        for h in highlights:
+            st.markdown(f"- {h}")
+    else:
+        st.info("No notable events recorded for this date.")
+
+    st.divider()
+    st.subheader("🗺️ Region-by-Region Summary")
+    if region_sections:
+        for region, stations in region_sections.items():
+            with st.expander(f"**{region}**", expanded=True):
+                for station, bullets in stations.items():
+                    st.markdown(f"**{station}**")
+                    for bullet in bullets:
+                        st.markdown(f"- {bullet}")
+    else:
+        st.info("No outage events recorded for this date.")
+
+    st.divider()
+    st.subheader("⚠️ Outages Still Open (Carried Over)")
+    if still_open_lines:
+        for line in still_open_lines:
+            st.markdown(f"- {line}")
+    else:
+        st.success("No outages currently open.")
+
+    st.divider()
+    _region_label = selected_region if selected_region and selected_region != "All Regions" else "All Regions"
+    _party_label = f" · Party Responsible: {selected_party}" if selected_party != "All" else ""
+    subtitle = f"{_region_label} · 330kV/132kV Network{_party_label}"
+    dl_col1, dl_col2 = st.columns(2)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        word_filename = f"Daily_Outage_Report_{report_date}.docx"
+        word_path = os.path.join(tmpdir, word_filename)
+        try:
+            generate_narrative_word_report(
+                report_date=str(report_date),
+                at_a_glance=at_a_glance,
+                highlights=highlights,
+                region_sections=region_sections,
+                still_open_lines=still_open_lines,
+                output_path=word_path,
+                subtitle=subtitle,
+            )
+            with open(word_path, "rb") as f:
+                dl_col1.download_button(
+                    label="📥 Download as Word (.docx)",
+                    data=f.read(),
+                    file_name=word_filename,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+        except Exception as e:
+            dl_col1.error(f"Error generating Word report: {str(e)}")
+
+        pdf_filename = f"Daily_Outage_Report_{report_date}.pdf"
+        pdf_path = os.path.join(tmpdir, pdf_filename)
+        try:
+            generate_narrative_pdf_report(
+                report_date=str(report_date),
+                at_a_glance=at_a_glance,
+                highlights=highlights,
+                region_sections=region_sections,
+                still_open_lines=still_open_lines,
+                output_path=pdf_path,
+                subtitle=subtitle,
+            )
+            with open(pdf_path, "rb") as f:
+                dl_col2.download_button(
+                    label="📄 Download as PDF",
+                    data=f.read(),
+                    file_name=pdf_filename,
+                    mime="application/pdf",
+                )
+        except Exception as e:
+            dl_col2.error(f"Error generating PDF report: {str(e)}")
+
+
 # ──────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────
@@ -1969,6 +2112,7 @@ def main():
         ("🔧 Equipment Analysis", lambda: show_equipment_analysis(filtered)),
         ("🗼 Network Hierarchy", lambda: show_hierarchy(filtered)),
         ("📤 Export", lambda: show_export(filtered)),
+        ("📰 Daily Report", lambda: show_daily_report(df, user)),
     ]
     if user["role"] == "admin":
         tab_specs.append(("👥 Users", lambda: show_users(user)))

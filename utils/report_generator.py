@@ -475,3 +475,213 @@ def generate_pdf_report_with_tables(
     # Build PDF
     doc.build(story)
     return output_path
+
+
+def generate_narrative_word_report(
+    report_date: str,
+    at_a_glance: dict,
+    highlights: List[str],
+    region_sections: dict,
+    still_open_lines: List[str],
+    output_path: str = None,
+    subtitle: str = None,
+) -> str:
+    """Build the prose-style Daily Outage Report: at-a-glance summary, top
+    highlights, region-by-station narrative sections, and a still-open
+    carry-over list. Mirrors generate_word_report()'s heading conventions
+    but writes paragraphs/bullets instead of data tables, since this report
+    is meant to read like the source PDF's narrative style rather than a
+    data table."""
+    if output_path is None:
+        output_path = f"Daily_Outage_Report_{report_date}.docx"
+
+    doc = Document()
+
+    title = doc.add_heading(f'Daily Outage Report — {report_date}', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if subtitle:
+        sub_para = doc.add_paragraph(subtitle)
+        sub_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    gen_date = doc.add_paragraph(f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+    gen_date.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph()
+
+    doc.add_heading('At a Glance', 1)
+    class_counts = at_a_glance.get('class_counts', {})
+    class_line = ", ".join(f"{k}: {v}" for k, v in class_counts.items()) or "No events recorded"
+    doc.add_paragraph(f"Total Events: {at_a_glance.get('total_events', 0)} ({class_line})")
+    regions_covered = at_a_glance.get('regions_covered', [])
+    doc.add_paragraph(f"Regions Covered: {', '.join(regions_covered) if regions_covered else 'None'}")
+    doc.add_paragraph(f"Still-Open Outages (all dates): {at_a_glance.get('still_open_count', 0)}")
+    doc.add_paragraph(f"Lowest Recorded Frequency: {at_a_glance.get('lowest_frequency', 'N/A')}")
+    doc.add_paragraph(f"New Assets Energised: {at_a_glance.get('new_assets_energised', 'N/A')}")
+    if at_a_glance.get('dominant_issue'):
+        doc.add_paragraph(f"Dominant System Issue: {at_a_glance['dominant_issue']}")
+    if at_a_glance.get('grid_status_at_close'):
+        doc.add_paragraph(f"Grid Status at Close: {at_a_glance['grid_status_at_close']}")
+
+    doc.add_heading('System Observations', 1)
+    if highlights:
+        for h in highlights:
+            doc.add_paragraph(h, style='List Bullet')
+    else:
+        doc.add_paragraph("No notable events recorded for this date.")
+
+    doc.add_heading('Region-by-Region Summary', 1)
+    if region_sections:
+        for region, stations in region_sections.items():
+            doc.add_heading(region, 2)
+            for station, bullets in stations.items():
+                p = doc.add_paragraph()
+                p.add_run(station).bold = True
+                for bullet in bullets:
+                    doc.add_paragraph(bullet, style='List Bullet')
+    else:
+        doc.add_paragraph("No outage events recorded for this date.")
+
+    doc.add_heading('Outages Still Open (Carried Over)', 1)
+    if still_open_lines:
+        for line in still_open_lines:
+            doc.add_paragraph(line, style='List Bullet')
+    else:
+        doc.add_paragraph("No outages currently open.")
+
+    doc.save(output_path)
+    return output_path
+
+
+def generate_narrative_pdf_report(
+    report_date: str,
+    at_a_glance: dict,
+    highlights: List[str],
+    region_sections: dict,
+    still_open_lines: List[str],
+    output_path: str = None,
+    subtitle: str = None,
+) -> str:
+    """PDF rendition of the Daily Outage Report, laid out like the source
+    TCC report this feature was modeled on: a title page with an
+    at-a-glance summary table and narrative call-outs, a region-by-region
+    breakdown with a colored bar per region, and a System Observations
+    page -- same content as generate_narrative_word_report, different
+    format."""
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib import colors
+    from xml.sax.saxutils import escape as _esc
+
+    if output_path is None:
+        output_path = f"Daily_Outage_Report_{report_date}.pdf"
+
+    doc = SimpleDocTemplate(
+        output_path, pagesize=A4,
+        topMargin=1.5 * cm, bottomMargin=1.5 * cm, leftMargin=1.8 * cm, rightMargin=1.8 * cm,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'NarrativeTitle', parent=styles['Heading1'], fontSize=17, alignment=TA_CENTER,
+        textColor=colors.HexColor('#1a3a6b'), spaceAfter=4,
+    )
+    subtitle_style = ParagraphStyle(
+        'NarrativeSubtitle', parent=styles['Normal'], fontSize=9.5, alignment=TA_CENTER,
+        textColor=colors.HexColor('#666666'), spaceAfter=4,
+    )
+    sub_heading_style = ParagraphStyle(
+        'SubHeading', parent=styles['Heading2'], fontSize=13,
+        textColor=colors.HexColor('#1a3a6b'), spaceBefore=8, spaceAfter=6,
+    )
+    station_style = ParagraphStyle(
+        'StationHeading', parent=styles['Heading3'], fontSize=10.5,
+        textColor=colors.HexColor('#1a3a6b'), spaceBefore=8, spaceAfter=2,
+    )
+    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=9.5, leading=13, spaceAfter=4)
+    bullet_style = ParagraphStyle('Bullet', parent=body_style, leftIndent=14)
+
+    story = [
+        Paragraph(f"SUMMARY OF OUTAGES &amp; EVENTS — {report_date}", title_style),
+    ]
+    if subtitle:
+        story.append(Paragraph(_esc(subtitle), subtitle_style))
+    story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", subtitle_style))
+    story.append(Spacer(1, 0.4 * cm))
+
+    class_counts = at_a_glance.get('class_counts', {})
+    regions_covered = at_a_glance.get('regions_covered', [])
+    glance_rows = [
+        ["Report Date", report_date],
+        ["Issuing Authority", "Transmission Company of Nigeria (TCN)"],
+        ["Regions Covered", ", ".join(regions_covered) if regions_covered else "None"],
+        ["Forced Events", str(class_counts.get("Forced", 0))],
+        ["Emergency Events", str(class_counts.get("Emergency", 0))],
+        ["Planned Events", str(class_counts.get("Planned", 0))],
+        ["Total Events", str(at_a_glance.get("total_events", 0))],
+        ["Still-Open Outages (all dates)", str(at_a_glance.get("still_open_count", 0))],
+        ["Lowest Recorded Frequency", at_a_glance.get("lowest_frequency", "N/A")],
+        ["New Assets Energised", at_a_glance.get("new_assets_energised", "N/A")],
+    ]
+    glance_table = Table(glance_rows, colWidths=[6.3 * cm, 10.4 * cm])
+    glance_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#4472C4')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ROWBACKGROUNDS', (1, 0), (1, -1), [colors.white, colors.HexColor('#F4F6FB')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(glance_table)
+    story.append(Spacer(1, 0.4 * cm))
+
+    if at_a_glance.get('dominant_issue'):
+        story.append(Paragraph("<b>Dominant System Issue</b>", station_style))
+        story.append(Paragraph(_esc(at_a_glance['dominant_issue']), body_style))
+    if at_a_glance.get('grid_status_at_close'):
+        story.append(Paragraph("<b>Grid Status at Close</b>", station_style))
+        story.append(Paragraph(_esc(at_a_glance['grid_status_at_close']), body_style))
+
+    story.append(PageBreak())
+    story.append(Paragraph("REGION-BY-REGION SUMMARY", sub_heading_style))
+    if region_sections:
+        for region, stations in region_sections.items():
+            region_bar = Table([[region.upper()]], colWidths=[16.9 * cm])
+            region_bar.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1a3a6b')),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.whitesmoke),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            story.append(Spacer(1, 0.3 * cm))
+            story.append(region_bar)
+            for station, bullets in stations.items():
+                story.append(Paragraph(_esc(station), station_style))
+                for bullet in bullets:
+                    story.append(Paragraph(f"• {_esc(bullet)}", bullet_style))
+    else:
+        story.append(Paragraph("No outage events recorded for this date.", body_style))
+
+    story.append(PageBreak())
+    story.append(Paragraph("SYSTEM OBSERVATIONS", sub_heading_style))
+    if highlights:
+        for i, h in enumerate(highlights, start=1):
+            story.append(Paragraph(f"<b>Notable Event {i}:</b> {_esc(h)}", bullet_style))
+    else:
+        story.append(Paragraph("No notable events recorded for this date.", body_style))
+
+    story.append(Spacer(1, 0.4 * cm))
+    story.append(Paragraph("OUTAGES STILL OPEN (CARRIED OVER)", sub_heading_style))
+    if still_open_lines:
+        for line in still_open_lines:
+            story.append(Paragraph(f"• {_esc(line)}", bullet_style))
+    else:
+        story.append(Paragraph("No outages currently open.", body_style))
+
+    doc.build(story)
+    return output_path

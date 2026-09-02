@@ -276,6 +276,8 @@ else:
         kpi_card("Feeders Over Budget", f"{len(exceedance_df)}", "", "alert", "#c81e28"),
         kpi_card("Total Excess Hours", f"{exceedance_df['excess_hours'].sum():.1f}", "hrs", "clock", "#956400"),
         kpi_card("Total Excess Load Loss", f"{exceedance_df['excess_load_loss_mwh'].sum():.2f}", "MWh", "bolt", "#1e3a7a"),
+    ])
+    kpi_grid([
         kpi_card("Estimated Total Cost", f"₦{total_cost:,.2f}", "", "chart", "#c81e28"),
     ])
 
@@ -289,7 +291,18 @@ else:
         'tariff_rate_ngn_per_kwh': 'Tariff Rate (₦/kWh)', 'estimated_cost_ngn': 'Estimated Cost (₦)',
     }).sort_values('Estimated Cost (₦)', ascending=False)
 
-    st.dataframe(one_indexed(display_df), use_container_width=True)
+    st.dataframe(
+        one_indexed(display_df),
+        use_container_width=True,
+        column_config={
+            "TCN Outage Hours": st.column_config.NumberColumn(format="%,.2f"),
+            "TCN Budget (hrs)": st.column_config.NumberColumn(format="%,.2f"),
+            "Excess Hours": st.column_config.NumberColumn(format="%,.2f"),
+            "Excess Load Loss (MWh)": st.column_config.NumberColumn(format="%,.2f"),
+            "Tariff Rate (₦/kWh)": st.column_config.NumberColumn(format="₦ %,.2f"),
+            "Estimated Cost (₦)": st.column_config.NumberColumn(format="₦ %,.2f"),
+        },
+    )
     st.caption(
         f"Rates vary by disco + feeder band -- manage under Tariff Settings (Super Admin). "
         f"Global default: ₦{_default_rate:,.2f}/kWh."

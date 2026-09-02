@@ -280,10 +280,66 @@ def read_outages_using_date_off(start_date: str, end_date: str) -> pd.DataFrame:
         SELECT id, disco, region, area, station, feeder_33kv, date_off, time_off, date_on, time_on,
                duration_outage, outage_class, last_load, event_indication, party_responsible, weather_condition
         FROM outages
-        
+
         ORDER BY date_off, time_off
     """)
     return pd.read_sql_query(query, engine, params={"start_date": start_date, "end_date": end_date})
+
+
+@st.cache_data(ttl=300)
+def read_outages_for_report(start_date: str, end_date: str) -> pd.DataFrame:
+    """Every outage that *started* in this window (filtered on date_off, not
+    date_on -- date_on is NULL for still-open outages, which would silently
+    exclude them from a date_on-filtered query). Includes the narrative
+    fields (remarks, officer names, frequency_hz) that read_outages() and
+    read_outages_using_date_off() don't select, for the Daily Outage Report.
+    """
+    engine = get_engine()
+    query = text("""
+        SELECT id, disco, region, area, station, feeder_33kv, date_off, time_off, date_on, time_on,
+               duration_outage, outage_class, last_load, event_indication, party_responsible,
+               officer_confirming_interruption, officer_confirming_restoration, weather_condition,
+               remarks, frequency_hz
+        FROM outages
+        WHERE date_off BETWEEN :start_date AND :end_date
+        ORDER BY date_off, time_off
+    """)
+    return pd.read_sql_query(query, engine, params={"start_date": start_date, "end_date": end_date})
+
+
+@st.cache_data(ttl=300)
+def read_open_outages() -> pd.DataFrame:
+    """Every outage with no restoration recorded yet (date_on IS NULL) --
+    "still out" regardless of when it started, including outages carried
+    over from earlier days. No date bound by design."""
+    engine = get_engine()
+    query = text("""
+        SELECT id, disco, region, area, station, feeder_33kv, date_off, time_off, date_on, time_on,
+               duration_outage, outage_class, last_load, event_indication, party_responsible,
+               officer_confirming_interruption, officer_confirming_restoration, weather_condition,
+               remarks, frequency_hz
+        FROM outages
+        WHERE date_on IS NULL
+        ORDER BY date_off, time_off
+    """)
+    return pd.read_sql_query(query, engine)
+
+
+@st.cache_data(ttl=300)
+def read_distinct_party_responsible() -> list:
+    """Every distinct `party_responsible` value on record, for the Daily
+    Outage Report's party filter -- queried across all history (not just
+    the selected report date) so the dropdown's options stay stable as the
+    user changes dates."""
+    engine = get_engine()
+    query = text("""
+        SELECT DISTINCT party_responsible FROM outages
+        WHERE party_responsible IS NOT NULL AND party_responsible != ''
+        ORDER BY party_responsible
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(query).fetchall()
+    return [r[0] for r in rows]
 
 # -----------------------------
 # USER AUTHENTICATION HELPERS
