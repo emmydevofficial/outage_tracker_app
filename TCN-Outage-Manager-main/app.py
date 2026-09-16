@@ -53,6 +53,7 @@ LOGO = BASE_DIR / "tcn_logo.png"
 # URL of the Load & Outage Analytics app (33kV feeder load/outages), used for
 # the sidebar cross-link button.
 LOAD_OUTAGE_ANALYTICS_URL = os.getenv("LOAD_OUTAGE_ANALYTICS_URL", "http://93.127.137.148:8501")
+INCIDENT_OUTAGE_URL = os.getenv("INCIDENT_OUTAGE_URL", "http://93.127.137.148:8503")
 
 TCN_RED = "#c81e28"
 TCN_BLUE = "#1e3a7a"
@@ -967,6 +968,9 @@ def sidebar_filters(df, user):
 
         st.link_button(
             "📊 Open Load & Outage Analytics", LOAD_OUTAGE_ANALYTICS_URL, use_container_width=True,
+        )
+        st.link_button(
+            "📋 Incident & Outage Request", INCIDENT_OUTAGE_URL, use_container_width=True,
         )
 
         st.markdown("""

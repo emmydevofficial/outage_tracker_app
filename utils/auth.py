@@ -11,6 +11,7 @@ from .branding import render_login_screen
 from .session_cookie import issue_session_cookie, read_session_username, clear_session_cookie
 
 TCN_OUTAGE_MANAGER_URL = os.getenv("TCN_OUTAGE_MANAGER_URL", "http://93.127.137.148:8502")
+INCIDENT_OUTAGE_URL = os.getenv("INCIDENT_OUTAGE_URL", "http://93.127.137.148:8503")
 
 
 def hash_password(password: str) -> str:
@@ -89,6 +90,9 @@ def login():
         st.sidebar.caption(f"👤 {st.session_state.get('username', '')} — {role_label} — {region_label}")
         st.sidebar.link_button(
             "🗼 330kV · 132kV Outage Manager", TCN_OUTAGE_MANAGER_URL, use_container_width=True,
+        )
+        st.sidebar.link_button(
+            "📋 Incident & Outage Request", INCIDENT_OUTAGE_URL, use_container_width=True,
         )
         # optionally provide a logout button
         if st.sidebar.button("Logout"):

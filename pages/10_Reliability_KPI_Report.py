@@ -199,8 +199,13 @@ if status_choice == "Positive (≥0)":
 elif status_choice == "Negative (<0)":
     filtered = filtered[filtered['available_outage_hours_tcn'] < 0]
 
-# filtering above leaves gaps in the row index (e.g. 0, 2, 5, 7 ...) -- give
-# the displayed table a clean, contiguous, 1-based row count instead
+# sort by the last column (available outage hours for TCN), worst first --
+# the most negative value is the station/feeder furthest over its available
+# outage duration, ascending order puts that at the top
+filtered = filtered.sort_values('available_outage_hours_tcn', ascending=True)
+
+# filtering/sorting above leaves gaps in the row index (e.g. 0, 2, 5, 7 ...)
+# -- give the displayed table a clean, contiguous, 1-based row count instead
 filtered = one_indexed(filtered)
 
 # apply color styling to available hours column (green if positive, red if negative)
@@ -221,16 +226,16 @@ st.dataframe(styler)
 
 st.subheader("💰 TCN Outage Hours Exceedance — Estimated Cost")
 st.caption(
-    "Stations/feeders where TCN has used more than its allotted outage-hour "
-    "budget. Cost is estimated using each outage event's own recorded load, "
-    "counting only the hours after TCN's budget was exhausted -- not a flat "
-    "multiply of the whole period's load loss."
+    "Stations/feeders where TCN has used more than its available outage "
+    "duration. Cost is estimated using each outage event's own recorded load, "
+    "counting only the hours after TCN's available outage duration was "
+    "exhausted -- not a flat multiply of the whole period's load loss."
 )
 
 exceedance_df = feeder_party_pivot[feeder_party_pivot['available_outage_hours_tcn'] < 0].copy()
 
 if exceedance_df.empty:
-    st.info("No station/feeder exceeded TCN's outage-hour budget for this period.")
+    st.info("No station/feeder exceeded TCN's available outage duration for this period.")
 else:
     tcn_events = out_df[out_df['party_responsible'] == 'TCN'].sort_values(['clipped_start', 'id'])
     grouped_events = {key: g for key, g in tcn_events.groupby(['station', 'feeder_33kv'])}
@@ -273,7 +278,7 @@ else:
 
     total_cost = exceedance_df['estimated_cost_ngn'].sum()
     kpi_grid([
-        kpi_card("Feeders Over Budget", f"{len(exceedance_df)}", "", "alert", "#c81e28"),
+        kpi_card("Feeders Over Available Outage Duration", f"{len(exceedance_df)}", "", "alert", "#c81e28"),
         kpi_card("Total Excess Hours", f"{exceedance_df['excess_hours'].sum():.1f}", "hrs", "clock", "#956400"),
         kpi_card("Total Excess Load Loss", f"{exceedance_df['excess_load_loss_mwh'].sum():.2f}", "MWh", "bolt", "#1e3a7a"),
     ])
@@ -286,7 +291,7 @@ else:
         'excess_hours', 'excess_load_loss_mwh', 'tariff_rate_ngn_per_kwh', 'estimated_cost_ngn',
     ]].rename(columns={
         'station': 'Station', 'feeder_33kv': 'Feeder',
-        'total_outage_hour_TCN': 'TCN Outage Hours', 'max_hours_tcn': 'TCN Budget (hrs)',
+        'total_outage_hour_TCN': 'TCN Outage Hours', 'max_hours_tcn': 'TCN Available Outage Duration (hrs)',
         'excess_hours': 'Excess Hours', 'excess_load_loss_mwh': 'Excess Load Loss (MWh)',
         'tariff_rate_ngn_per_kwh': 'Tariff Rate (₦/kWh)', 'estimated_cost_ngn': 'Estimated Cost (₦)',
     }).sort_values('Estimated Cost (₦)', ascending=False)
@@ -296,7 +301,7 @@ else:
         use_container_width=True,
         column_config={
             "TCN Outage Hours": st.column_config.NumberColumn(format="%,.2f"),
-            "TCN Budget (hrs)": st.column_config.NumberColumn(format="%,.2f"),
+            "TCN Available Outage Duration (hrs)": st.column_config.NumberColumn(format="%,.2f"),
             "Excess Hours": st.column_config.NumberColumn(format="%,.2f"),
             "Excess Load Loss (MWh)": st.column_config.NumberColumn(format="%,.2f"),
             "Tariff Rate (₦/kWh)": st.column_config.NumberColumn(format="₦ %,.2f"),
