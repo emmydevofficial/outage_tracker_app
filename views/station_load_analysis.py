@@ -1,20 +1,17 @@
 """
-### FILE: pages/06_Station_Load_Analysis.py
+### FILE: views/station_load_analysis.py
 Station-level analysis
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart, one_indexed
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 
-login()
 
-st.set_page_config(page_title="Station Load Analysis", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Station Load Analysis", "33kV Feeder Network · Station Drilldown")
 
 today = date.today()

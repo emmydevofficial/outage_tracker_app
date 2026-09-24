@@ -1,23 +1,20 @@
 
 """
-### FILE: pages/05_Region_Load_Analysis.py
+### FILE: views/region_load_analysis.py
 Region-level KPIs and charts
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
 from utils.pdf_generator import generate_pdf
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 
 # enforce authentication
-login()
 
-st.set_page_config(page_title="Region Load Analysis", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Region Load Analysis", "33kV Feeder Network · Region Rollup")
 
 # Date range picker

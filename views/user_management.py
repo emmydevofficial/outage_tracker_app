@@ -1,26 +1,24 @@
 """
-### FILE: pages/14_User_Management.py
+### FILE: views/user_management.py
 Super Admin only: create, update, delete users and assign their region.
 
-Any logged-in user sees this page listed in the sidebar (Streamlit's classic
-multipage nav can't hide entries per-role), but require_super_admin() denies
-everyone else immediately -- no data is rendered for non-admins.
+app.py's router leaves this page out of the sidebar entirely for non-admins
+(see the Admin section there); require_super_admin() is kept here too as a
+second line of defense -- no data is rendered for non-admins even if this
+file were ever reached directly.
 """
 
 import streamlit as st
-from utils.auth import login, require_super_admin, hash_password
+from utils.auth import require_super_admin, hash_password
 
-login()
 require_super_admin()
 
 import pandas as pd
 from utils.db import list_users, create_user, update_user, delete_user, count_super_admins
 from utils.regions import REGIONS
 from utils.activity_log import log_activity
-from utils.branding import inject_css, page_header, one_indexed
+from utils.branding import page_header, one_indexed
 
-st.set_page_config(page_title="User Management", page_icon="⚡", layout="wide")
-inject_css()
 page_header("User Management", "33kV Feeder Network · Access Control")
 st.caption("Super Admin only. Regional users can view, operate on, and upload data only for their assigned region.")
 

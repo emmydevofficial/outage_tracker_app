@@ -1,5 +1,5 @@
 """
-### FILE: pages/16_Activity_Log.py
+### FILE: views/activity_log.py
 Super Admin only: audit trail of state-changing actions (logins, uploads,
 deletes, user management) plus a directory of every uploaded file.
 
@@ -10,19 +10,16 @@ script that can optionally be wired into a real OS cron for exact-day timing.
 """
 
 import streamlit as st
-from utils.auth import login, require_super_admin
+from utils.auth import require_super_admin
 
-login()
 require_super_admin()
 
 from datetime import date, timedelta
 
 from utils.activity_log import read_activity_log, list_activity_actions
 from utils.file_storage import list_uploaded_files, purge_expired_files, get_file_bytes
-from utils.branding import inject_css, page_header, one_indexed
+from utils.branding import page_header, one_indexed
 
-st.set_page_config(page_title="Activity Log", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Activity Log & Uploaded Files", "33kV Feeder Network · Audit Trail")
 st.caption("Super Admin only. Read-only page views are not logged -- only actions that change data.")
 

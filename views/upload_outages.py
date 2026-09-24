@@ -1,5 +1,5 @@
 """
-### FILE: pages/01_Upload_Outages.py
+### FILE: views/upload_outages.py
 Utility page that allows the user to upload a CSV file containing outage
 records and push the rows into the PostgreSQL ``outages`` table.  The
 uploader expects the CSV to follow the layout described in the project
@@ -7,18 +7,15 @@ requirements (hour/minute columns that will be collapsed).
 """
 
 import streamlit as st
-from utils.auth import login, is_super_admin, current_region
+from utils.auth import is_super_admin, current_region
 import pandas as pd
 import numpy as np
 from utils.db import insert_outages, insert_outages_from_csv
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
-from utils.branding import inject_css, page_header, one_indexed
+from utils.branding import page_header, one_indexed
 
-login()
 
-st.set_page_config(page_title="Upload Outages", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Upload Outage CSV", "33kV Feeder Network · Data Ingestion")
 
 upload = st.file_uploader("Choose outage CSV file", type=["csv"])

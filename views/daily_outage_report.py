@@ -1,5 +1,5 @@
 """
-### FILE: pages/20_Daily_Outage_Report.py
+### FILE: views/daily_outage_report.py
 Narrative "short story" style Daily Outage Report -- pick a date, get a
 prose summary of every event that happened that day (region-scoped), plus
 a carry-over list of outages still open from any earlier day. Generated
@@ -13,8 +13,8 @@ from datetime import date
 
 import streamlit as st
 
-from utils.auth import login, is_super_admin, current_region
-from utils.branding import inject_css, page_header
+from utils.auth import is_super_admin, current_region
+from utils.branding import page_header
 from utils.db import read_outages_for_report, read_open_outages, read_distinct_party_responsible
 from utils.narrative_report import (
     build_at_a_glance,
@@ -24,10 +24,7 @@ from utils.narrative_report import (
 )
 from utils.report_generator import generate_narrative_word_report, generate_narrative_pdf_report
 
-login()
 
-st.set_page_config(page_title="Daily Outage Report", page_icon="📰", layout="wide")
-inject_css()
 page_header("Daily Outage Report", "33kV Feeder Network · Narrative Summary")
 st.markdown("Pick a date to generate a short-story style summary of that day's outages.")
 

@@ -1,17 +1,14 @@
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import pandas as pd
 from utils.db import read_outages
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
 from datetime import date, timedelta
 import plotly.express as px
 import tempfile
 import os
 
-login()
 
-st.set_page_config(page_title="Regional Dashboard", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Regional Dashboard", "33kV Feeder Network · Cross-Region Comparison")
 st.markdown(
     "Use this dashboard to inspect outage performance by region, compare load loss and outage duration, and review per-region outage metrics."

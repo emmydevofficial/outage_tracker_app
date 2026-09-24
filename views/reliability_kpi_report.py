@@ -1,22 +1,19 @@
 """
-### FILE: pages/10_Reliability_KPI_Report.py
+### FILE: views/reliability_kpi_report.py
 Computes SAIDI, SAIFI, CAIDI approximations. Requires customers served per station to compute accurate indices.
 This sample assumes a 'customers' column is NOT available, so it shows station-level outage summary.
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import pandas as pd
 from utils.db import read_outages, read_tcn_sla_compliance, read_tariff_rates, read_tariff_settings
-from utils.branding import inject_css, page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed, kpi_card, kpi_grid
+from utils.branding import page_header, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed, kpi_card, kpi_grid
 from utils.tariff import get_tariff_rate
 from datetime import date, timedelta
 import plotly.express as px
 
-login()
 
-st.set_page_config(page_title="Reliability KPIs", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Reliability KPI Report", "33kV Feeder Network · SAIDI/SAIFI & SLA Compliance")
 
 today = date.today()

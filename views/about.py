@@ -1,16 +1,12 @@
 """
-### FILE: pages/17_About.py
+### FILE: views/about.py
 About page: what the app is, and the team behind it.
 """
 
 import streamlit as st
-from utils.auth import login
-from utils.branding import inject_css, page_header, credits_section
+from utils.branding import page_header, credits_section
 
-login()
 
-st.set_page_config(page_title="About", page_icon="⚡", layout="wide")
-inject_css()
 page_header("About", "33kV Feeder Network · Load & Outage Analytics")
 
 st.markdown(

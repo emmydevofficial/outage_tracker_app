@@ -1,81 +1,72 @@
-# PROJECT: Streamlit + Plotly Dashboard for Transmission Loads & Outages
-# File layout (multiple files concatenated below with clear separators)
-
 """
 ### FILE: app.py
-Entry point for the Streamlit app. This file provides a home/landing page and links to pages.
+Entry point / router. Builds the sidebar menu explicitly with
+st.navigation()/st.Page(), grouped into sections instead of one long flat
+list -- Streamlit's old pages/-folder auto-nav has no grouping support at
+all, which is why it grew into a 20-item list. Admin-only pages are simply
+left out of the menu for regional users (not shown as "access denied").
+Page scripts live in views/, NOT pages/, so there's no second
+auto-generated menu competing with this one.
+
 Run with: streamlit run app.py
 """
-
 import streamlit as st
-from utils.auth import login
-from utils.branding import inject_css, page_header, credits_section
-
-# require login before doing anything else
-login()
+from utils.auth import login, is_super_admin
+from utils.branding import inject_css
 
 st.set_page_config(page_title="Power Ops Dashboard", page_icon="⚡", layout="wide")
+
+login()
 inject_css()
-page_header("Load & Outage Analytics", "33kV Feeder Network · Load · Outages · Analytics")
 
-st.markdown(
-    """
-    This Streamlit app contains multiple pages (use the left sidebar Pages menu).
+_home = [
+    st.Page("views/home.py", title="Home", icon=":material/home:", default=True),
+]
+_upload = [
+    st.Page("views/upload_outages.py", title="Upload Outages", icon=":material/upload_file:"),
+    st.Page("views/upload_feeder_load.py", title="Upload Feeder Load", icon=":material/upload_file:"),
+    st.Page("views/upload_line_load.py", title="Upload Line Load", icon=":material/upload_file:"),
+    st.Page("views/upload_transformer_load.py", title="Upload Transformer Load", icon=":material/upload_file:"),
+]
+_load_analysis = [
+    st.Page("views/region_load_analysis.py", title="Region Load Analysis", icon=":material/bar_chart:"),
+    st.Page("views/station_load_analysis.py", title="Station Load Analysis", icon=":material/bar_chart:"),
+    st.Page("views/feeder_load_analysis.py", title="Feeder Load Analysis", icon=":material/bar_chart:"),
+    st.Page("views/transformer_load.py", title="Transformer Load", icon=":material/bar_chart:"),
+]
+_outage_reliability = [
+    st.Page("views/outage_analytics.py", title="Outage Analytics", icon=":material/bolt:"),
+    st.Page("views/reliability_kpi_report.py", title="Reliability KPI Report", icon=":material/monitoring:"),
+    st.Page("views/regional_dashboard.py", title="Regional Dashboard", icon=":material/dashboard:"),
+]
+_reports = [
+    st.Page("views/generate_reports.py", title="Generate Reports", icon=":material/description:"),
+    st.Page("views/daily_outage_report.py", title="Daily Outage Report", icon=":material/newspaper:"),
+]
+_data_management = [
+    st.Page("views/outage_management.py", title="Outage Management", icon=":material/edit_note:"),
+    st.Page("views/load_data_management.py", title="Load Data Management", icon=":material/edit_note:"),
+]
+_admin = [
+    st.Page("views/user_management.py", title="User Management", icon=":material/group:"),
+    st.Page("views/activity_log.py", title="Activity Log", icon=":material/history:"),
+    st.Page("views/tariff_settings.py", title="Tariff Settings", icon=":material/payments:"),
+]
+_info = [
+    st.Page("views/about.py", title="About", icon=":material/info:"),
+    st.Page("views/privacy_policy.py", title="Privacy Policy", icon=":material/shield:"),
+]
 
-    Pages included:
-    1. Upload Feeder Load (33kV feeder hourly load tracking upload)
-    2. Upload Line Load (330/132kV line hourly load tracking upload)
-    3. Upload Transformer Load (transformer hourly load tracking upload)
-    4. Region Load Analysis
-    5. Station Load Analysis
-    6. Feeder Load Analysis
-    7. Transformer Load
-    8. Outage Analytics
-    9. Reliability KPI Report
-    10. Regional Dashboard
-    11. User Management (Super Admin only)
-    12. Load Data Management (delete feeder/line/transformer load by date and region)
-    13. Activity Log (Super Admin only: audit trail + uploaded files directory)
-    14. Tariff Settings (Super Admin only: outage-hour exceedance cost rates)
+nav = {
+    "Menu": _home,
+    "Upload Data": _upload,
+    "Load Analysis": _load_analysis,
+    "Outage & Reliability": _outage_reliability,
+    "Reports": _reports,
+    "Data Management": _data_management,
+    "Info": _info,
+}
+if is_super_admin():
+    nav["Admin"] = _admin
 
-    The pages live in the `pages/` folder. Make sure you have a `utils/` folder with
-    `db.py` and `pdf_generator.py`.
-    """
-)
-
-st.sidebar.header("Quick actions")
-if st.sidebar.button("Refresh data cache"):
-    st.rerun()
-
-#credits_section()
-
-
-# ------------------------------------------------------------------
-# Separator for next files
-# ------------------------------------------------------------------
-
-
-
-# ------------------------------------------------------------------
-# Separator for next file
-# ------------------------------------------------------------------
-
-
-
-
-# ------------------------------------------------------------------
-# Separator for next files (pages)
-# ------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-# End of concatenated project files
+st.navigation(nav).run()

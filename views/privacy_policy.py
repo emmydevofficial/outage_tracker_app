@@ -1,17 +1,13 @@
 """
-### FILE: pages/18_Privacy_Policy.py
+### FILE: views/privacy_policy.py
 Privacy policy: what data this internal tool collects, how it's used,
 retained, and protected.
 """
 
 import streamlit as st
-from utils.auth import login
-from utils.branding import inject_css, page_header
+from utils.branding import page_header
 
-login()
 
-st.set_page_config(page_title="Privacy Policy", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Privacy Policy", "33kV Feeder Network · Load & Outage Analytics")
 
 st.caption("Last updated: August 2026")

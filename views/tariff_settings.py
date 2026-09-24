@@ -1,5 +1,5 @@
 """
-### FILE: pages/19_Tariff_Settings.py
+### FILE: views/tariff_settings.py
 Super Admin only: set the Naira/kWh tariff used to estimate the cost of
 TCN's outage-hour exceedance on the Reliability KPI Report page.
 
@@ -10,9 +10,8 @@ back to the global default. See utils/tariff.py for the lookup logic.
 """
 
 import streamlit as st
-from utils.auth import login, require_super_admin
+from utils.auth import require_super_admin
 
-login()
 require_super_admin()
 
 import pandas as pd
@@ -24,10 +23,8 @@ from utils.db import (
     upsert_tariff_rate,
 )
 from utils.activity_log import log_activity
-from utils.branding import inject_css, page_header
+from utils.branding import page_header
 
-st.set_page_config(page_title="Tariff Settings", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Tariff Settings", "33kV Feeder Network · Outage Exceedance Cost")
 st.caption(
     "Super Admin only. These rates drive the estimated cost figures on the "

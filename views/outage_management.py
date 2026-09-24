@@ -1,5 +1,5 @@
 """
-### FILE: pages/11_Outage_Management.py
+### FILE: views/outage_management.py
 
 Outage management page — provides two privileged delete operations:
 
@@ -16,7 +16,7 @@ user is asked to identify themselves inline.
 """
 
 import streamlit as st
-from utils.auth import login, is_super_admin, current_region
+from utils.auth import is_super_admin, current_region
 from utils.activity_log import log_activity
 from datetime import date, timedelta
 
@@ -27,12 +27,9 @@ from utils.db import (
     truncate_outages,
     read_outages,
 )
-from utils.branding import inject_css, page_header
+from utils.branding import page_header
 
-login()
 # ── page config ────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Outage Management", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Outage Record Management", "33kV Feeder Network · Data Management")
 st.caption(
     "Use the sections below to delete outage records. "

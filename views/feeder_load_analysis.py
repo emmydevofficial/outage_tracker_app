@@ -1,20 +1,17 @@
 """
-### FILE: pages/07_Feeder_Load_Analysis.py
+### FILE: views/feeder_load_analysis.py
 Feeder-level analysis and top feeders
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart
 from datetime import date, timedelta
 
-login()
 
-st.set_page_config(page_title="Feeder Load Analysis", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Feeder Load Analysis", "33kV Feeder Network · Feeder Drilldown")
 
 today = date.today()

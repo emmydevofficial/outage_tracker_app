@@ -1,5 +1,5 @@
 """
-### FILE: pages/15_Load_Data_Management.py
+### FILE: views/load_data_management.py
 Load data management — lets an authenticated user delete hourly load
 readings (feeder, line, or transformer) for a date range and region.
 
@@ -15,7 +15,7 @@ repeated section rather than three near-identical pages.
 """
 
 import streamlit as st
-from utils.auth import login, is_super_admin, current_region
+from utils.auth import is_super_admin, current_region
 from utils.regions import REGIONS
 from datetime import date, timedelta
 
@@ -29,12 +29,9 @@ from utils.db import (
     read_transformer_load,
 )
 from utils.activity_log import log_activity
-from utils.branding import inject_css, page_header
+from utils.branding import page_header
 
-login()
 
-st.set_page_config(page_title="Load Data Management", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Load Data Management", "33kV Feeder Network · Data Management")
 st.caption(
     "Delete hourly load readings by date range and region. "

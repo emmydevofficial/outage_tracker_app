@@ -1,26 +1,23 @@
 """
-### FILE: pages/12_Generate_Reports.py
+### FILE: views/generate_reports.py
 Generate comprehensive outage reports by region in MS-Word and PDF formats.
 Combines data from Outage Analytics (page 5) and Reliability KPI Report (page 6).
 """
 
 import streamlit as st
-from utils.auth import login, filter_to_user_region
+from utils.auth import filter_to_user_region
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from utils.db import read_outages, read_tcn_sla_compliance, read_outages_using_date_off
 from utils.report_generator import generate_word_report, generate_pdf_report_with_tables
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, TCN_COLORS
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS
 from datetime import date, timedelta
 import os
 import tempfile
 import calendar
 
-login()
 
-st.set_page_config(page_title="Generate Reports", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Generate Outage Reports by Region", "33kV Feeder Network · Reporting")
 st.markdown("Generate comprehensive outage analysis reports in MS-Word and PDF formats.")
 

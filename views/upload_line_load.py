@@ -1,5 +1,5 @@
 """
-### FILE: pages/03_Upload_Line_Load.py
+### FILE: views/upload_line_load.py
 Upload the (330/132kV LINE) Load Management Tracking sheet for a region and
 upsert it into the line_load table. Region is read from the sheet itself
 (cell A1), so the same page handles any region's file.
@@ -16,9 +16,8 @@ Sheet layout expected:
 """
 
 import streamlit as st
-from utils.auth import login, is_super_admin, current_region
+from utils.auth import is_super_admin, current_region
 
-login()
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -27,10 +26,8 @@ from utils.load_upload import build_merge_fill_map, normalize_time_header, class
 from utils.regions import normalize_region
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
-from utils.branding import inject_css, page_header, kpi_card, kpi_grid, one_indexed
+from utils.branding import page_header, kpi_card, kpi_grid, one_indexed
 
-st.set_page_config(page_title="Upload Line Load", page_icon="⚡", layout="wide")
-inject_css()
 page_header("Upload 330/132kV Line Load Tracking", "33kV Feeder Network · Data Ingestion")
 st.markdown(
     "Upload the hourly (330/132kV LINE) Load Management Tracking sheet for a single region/date. "
