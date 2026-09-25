@@ -31,7 +31,7 @@ st.caption(
     "Reliability KPI Report page's TCN Outage Hours Exceedance table."
 )
 
-BANDS = ["A", "B", "C", "D"]
+BANDS = ["A", "B", "C", "D", "E"]
 
 # ══════════════════════════════════════════════════════════════════════════
 # Default tariff rate
@@ -46,7 +46,7 @@ current_default = read_tariff_settings()
 with st.form("default_rate_form"):
     new_default = st.number_input(
         "Default rate (₦/kWh)", min_value=0.0, value=float(current_default),
-        step=0.5, format="%.2f",
+        step=0.01, format="%.2f",
     )
     if st.form_submit_button("Save Default Rate", type="primary"):
         update_tariff_settings(new_default, st.session_state.get("username"))
@@ -86,7 +86,7 @@ edited_df = st.data_editor(
     hide_index=True,
     disabled=["Disco", "Band"],
     column_config={
-        "Rate (₦/kWh)": st.column_config.NumberColumn(min_value=0.0, step=0.5, format="%.2f"),
+        "Rate (₦/kWh)": st.column_config.NumberColumn(min_value=0.0, step=0.01, format="%.2f"),
     },
     key="tariff_rate_editor",
 )
