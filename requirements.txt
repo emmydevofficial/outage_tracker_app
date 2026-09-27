@@ -16,3 +16,6 @@ xlsxwriter
 itsdangerous
 streamlit-cookies-controller
 requests
+jinja2
+anthropic
+playwright

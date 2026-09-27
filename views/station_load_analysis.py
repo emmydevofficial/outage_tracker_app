@@ -8,7 +8,7 @@ from utils.auth import filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_feeder_load
-from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart, one_indexed
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_RED_SCALE, TCN_CHART_LAYOUT, _style_chart, one_indexed, min_positive_row
 from datetime import date, timedelta
 
 
@@ -36,7 +36,7 @@ max_load = max_load_row['load_mw']
 max_date = max_load_row['reading_date']
 max_time = max_load_row['reading_time']
 
-min_load_row = grouped_data.loc[grouped_data['load_mw'].idxmin()]
+min_load_row = min_positive_row(grouped_data)
 min_load = min_load_row['load_mw']
 min_date = min_load_row['reading_date']
 min_time = min_load_row['reading_time']
@@ -56,9 +56,8 @@ if not station_df.empty:
     details = []
     for feeder, df_feeder in station_df.groupby("feeder_33kv"):
         max_idx = df_feeder['load_mw'].idxmax()
-        min_idx = df_feeder['load_mw'].idxmin()
         max_row = df_feeder.loc[max_idx, ['load_mw', 'reading_date', 'reading_time']]
-        min_row = df_feeder.loc[min_idx, ['load_mw', 'reading_date', 'reading_time']]
+        min_row = min_positive_row(df_feeder)[['load_mw', 'reading_date', 'reading_time']]
         # always convert to str; this handles Timestamp/NaT or other
         # types and avoids displaying 'None'.
         max_time = str(max_row['reading_time']) if pd.notna(max_row['reading_time']) else ''

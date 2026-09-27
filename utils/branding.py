@@ -61,6 +61,16 @@ def one_indexed(df):
     return df
 
 
+def min_positive_row(df, col="load_mw"):
+    """The row with the smallest value in col that is still greater than
+    zero. A reading of exactly 0 is almost always a feeder/transformer
+    outage or a missing/faulty reading, not a real minimum load, so it's
+    excluded from "lowest load" figures unless every reading in the group
+    is 0 (nothing else to show, so it falls back to the plain minimum)."""
+    positive = df[df[col] > 0]
+    return positive.loc[positive[col].idxmin()] if not positive.empty else df.loc[df[col].idxmin()]
+
+
 def _eyebrow(text, bg="#E8EEF7", fg=TCN_BLUE):
     st.markdown(
         f'<span style="display:inline-block;font-size:0.8rem;font-weight:700;'

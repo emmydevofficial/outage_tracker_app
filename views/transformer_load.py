@@ -8,7 +8,7 @@ from utils.auth import filter_to_user_region
 import plotly.express as px
 import pandas as pd
 from utils.db import read_transformer_load
-from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed
+from utils.branding import page_header, kpi_card, kpi_grid, TCN_COLORS, TCN_CHART_LAYOUT, _style_chart, one_indexed, min_positive_row
 from datetime import date, timedelta
 
 
@@ -37,9 +37,8 @@ if not trans_sel.empty:
     details = []
     for tx, df_tx in trans_sel.groupby("transformer_nomenclature"):
         max_idx = df_tx['load_mw'].idxmax()
-        min_idx = df_tx['load_mw'].idxmin()
         max_row = df_tx.loc[max_idx, ['load_mw','reading_date','reading_time']]
-        min_row = df_tx.loc[min_idx, ['load_mw','reading_date','reading_time']]
+        min_row = min_positive_row(df_tx)[['load_mw','reading_date','reading_time']]
         # convert times to string to avoid None display
         # always convert to str; this handles Timestamp/NaT or other
         # types and avoids displaying 'None'.

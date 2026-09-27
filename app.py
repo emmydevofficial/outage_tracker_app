@@ -47,6 +47,12 @@ _data_management = [
     st.Page("views/outage_management.py", title="Outage Management", icon=":material/edit_note:"),
     st.Page("views/load_data_management.py", title="Load Data Management", icon=":material/edit_note:"),
 ]
+_monthly_review = [
+    st.Page("views/monthly_load_review.py", title="Monthly Load Review", icon=":material/fact_check:"),
+]
+_sla_reports = [
+    st.Page("views/sla_outage_reports.py", title="SLA Outage Reports", icon=":material/gavel:"),
+]
 _admin = [
     st.Page("views/user_management.py", title="User Management", icon=":material/group:"),
     st.Page("views/activity_log.py", title="Activity Log", icon=":material/history:"),
@@ -67,6 +73,8 @@ nav = {
     "Info": _info,
 }
 if is_super_admin():
+    nav["Monthly Review"] = _monthly_review
+    nav["SLA Outage Reports"] = _sla_reports
     nav["Admin"] = _admin
 
 st.navigation(nav).run()
