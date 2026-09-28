@@ -29,6 +29,13 @@ if out_df.empty:
 # ensure last_load is numeric so load loss can be calculated reliably
 out_df['last_load'] = pd.to_numeric(out_df['last_load'], errors='coerce')
 
+# some rows have party_responsible stored with stray leading/trailing
+# whitespace (e.g. " TCN" instead of "TCN") -- left as-is, this splits
+# into two separate columns wherever the table is pivoted by party
+# (one of them near-empty) and silently excludes those rows from any
+# exact `== 'TCN'` filter, understating the exceedance/cost figures below.
+out_df['party_responsible'] = out_df['party_responsible'].astype(str).str.strip()
+
 # filtering controls
 col1, col2, col3, col4 = st.columns(4)
 region_sel = col1.selectbox("Region", options=["All"] + sorted(out_df["region"].dropna().unique()))
