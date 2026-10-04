@@ -52,7 +52,8 @@ def check(label, expected, actual, tol_pct=2.0):
 
 def main():
     df = D.read_outages(PERIOD_START, PERIOD_END)
-    tcn = df[df["party_responsible"] == "TCN"].copy()
+    tcn_raw = df[df["party_responsible"] == "TCN"].copy()
+    tcn = tcn_raw[~tcn_raw["is_open"]]
 
     sla_map = D.sla_lookup(D.read_sla())
     tariff_map = D.tariff_lookup(D.read_tariff_rates())
@@ -99,7 +100,8 @@ def main():
     # month-to-date (1-19 Sept, single 19-day allocation)
     mtd = month_to_date(PERIOD_END)
     df_mtd = D.read_outages(mtd.start, mtd.end)
-    tcn_mtd = df_mtd[df_mtd["party_responsible"] == "TCN"].copy()
+    tcn_mtd_raw = df_mtd[df_mtd["party_responsible"] == "TCN"].copy()
+    tcn_mtd = tcn_mtd_raw[~tcn_mtd_raw["is_open"]]
     exc_mtd = M.exceedance(tcn_mtd, sla_map, tariff_map, default_rate, mtd.days)
     check("MTD feeders over allocation", 54, len(exc_mtd))
     check("MTD excess hours", 1606.9, exc_mtd["excess_hrs"].sum() if not exc_mtd.empty else 0)

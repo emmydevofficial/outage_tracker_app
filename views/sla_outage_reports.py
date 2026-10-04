@@ -180,11 +180,14 @@ with tab_generate:
             tariff_map = D.tariff_lookup(D.read_tariff_rates())
             default_rate = D.read_default_tariff()
             df = D.read_outages(period.start, period.end)
-            all_tcn = df[df["party_responsible"] == "TCN"].copy()
+            all_tcn_raw = df[df["party_responsible"] == "TCN"].copy()
+            all_tcn = all_tcn_raw[~all_tcn_raw["is_open"]]  # closed only, matches the Reliability KPI page's logic
+            still_open_this_period = M.still_open_feeders(all_tcn_raw)
 
             mtd = month_to_date(period.end)
             df_mtd = D.read_outages(mtd.start, mtd.end)
-            all_tcn_mtd = df_mtd[df_mtd["party_responsible"] == "TCN"].copy()
+            all_tcn_mtd_raw = df_mtd[df_mtd["party_responsible"] == "TCN"].copy()
+            all_tcn_mtd = all_tcn_mtd_raw[~all_tcn_mtd_raw["is_open"]]
 
             generated = {}
             use_ai = bool(ai_api_key)
@@ -231,7 +234,8 @@ with tab_generate:
                 mtd_exc = M.exceedance(all_tcn_mtd, sla_map, tariff_map, default_rate, mtd.days)
                 notes = store.list_notes(engine, period.start, period.end, None)
                 facts = M.build_facts(None, period.label, period.start, period.end, all_tcn, df, compliance, exc,
-                                      mtd_exc, mtd_compliance, None, notes)
+                                      mtd_exc, mtd_compliance, None, notes,
+                                      still_open=still_open_this_period.to_dict("records"))
                 text, ai_notes = (N.with_llm(facts, "management", ai_provider or "anthropic", ai_api_key, ai_model)
                                   if use_ai else (N.rule_based(facts, "management"), []))
                 mtd_top = M.top_cost_feeders(mtd_exc, 10)

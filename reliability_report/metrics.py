@@ -3,12 +3,50 @@ database, no python-docx. This is the SLA exceedance/cost engine, adapted
 from views/reliability_kpi_report.py's existing (already-shipped, already
 correct) exceedance section -- same math, generalized to any period and
 labeled with the band actually used (including "assumed").
+
+Every function below expects an already-CLOSED outage set: data.read_outages()
+marks a row with no restoration date/time logged at all as is_open=True and
+gives it duration_hr=0 (so it can never inflate a sum if a caller forgets to
+filter), but the caller is expected to drop is_open rows before computing
+any of the figures below -- matching views/reliability_kpi_report.py, which
+only ever counts an outage once it has a real end. still_open_feeders()
+below is the one function that wants the *open* rows, for listing them
+separately (never priced, never counted as an outage).
 """
 from __future__ import annotations
+
+import datetime as dt
 
 import pandas as pd
 
 from .data import BAND_HOURS, DEFAULT_BAND, TCN_SHARE, get_rate
+
+
+def _clean_str(v) -> str:
+    """pandas represents a missing string cell as float NaN, not None or
+    "" -- `v or ""` doesn't catch it (NaN is truthy), so a later [:200]
+    slice blows up with "float object is not subscriptable"."""
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return ""
+    return str(v)
+
+
+def still_open_feeders(df_tcn_all: pd.DataFrame, as_of: dt.date | None = None) -> pd.DataFrame:
+    """TCN-attributed outages with no restoration date/time logged at
+    all, as of as_of (default: today) -- a record to keep, never priced
+    and never counted in any outage total, since there's no real end to
+    measure a duration from. Pass the *unfiltered* read_outages() result
+    (open rows included)."""
+    as_of = as_of or dt.date.today()
+    if df_tcn_all.empty or "is_open" not in df_tcn_all.columns:
+        return pd.DataFrame(columns=["region", "station", "feeder", "date_off", "time_off", "outage_class", "days_open", "remarks"])
+    open_df = df_tcn_all[df_tcn_all["is_open"]].copy()
+    if open_df.empty:
+        return open_df
+    open_df["days_open"] = open_df["date_off"].map(lambda d: (as_of - d).days)
+    return (open_df.rename(columns={"feeder_33kv": "feeder"})
+            [["region", "station", "feeder", "date_off", "time_off", "outage_class", "days_open", "remarks"]]
+            .sort_values("days_open", ascending=False))
 
 
 def headline_kpis(df: pd.DataFrame) -> dict:
@@ -191,14 +229,18 @@ def _events_for_facts(events_df: pd.DataFrame, station, feeder, max_events: int 
 def build_facts(region: str | None, period_label: str, period_start, period_end, df_tcn: pd.DataFrame,
                  df_all: pd.DataFrame, compliance: pd.DataFrame, exc: pd.DataFrame, mtd_exc: pd.DataFrame,
                  mtd_compliance: pd.DataFrame, previous_issued: dict | None, human_notes: list[dict],
-                 top_n: int = 15) -> dict:
+                 top_n: int = 15, still_open: list[dict] | None = None) -> dict:
     """region=None means the management summary (all regions, TCN-only for
     SLA/exceedance/cost, all parties for the headline/region_summary
     figures); a region name means that regional report (TCN-only
     throughout). Includes each top-cost/repeat-offender feeder's own
     outage events (remarks capped at 400 chars) for the narrative's
     root-cause writing, and at-risk feeders from the month-to-date
-    compliance table."""
+    compliance table.
+
+    df_tcn/df_all must already be CLOSED-only (no is_open rows) -- pass
+    the open ones separately via still_open (from still_open_feeders()),
+    a record that's listed but never priced or counted."""
     kpis = headline_kpis(df_tcn)
     top_cost = top_cost_feeders(exc, top_n)
     at_risk = at_risk_feeders(mtd_compliance)
@@ -230,6 +272,12 @@ def build_facts(region: str | None, period_label: str, period_start, period_end,
         at_risk_threshold_pct=70,
         human_notes=human_notes,
         previous_issued=previous_issued,
+        still_open_feeders=[
+            dict(region=r["region"], station=r["station"], feeder=r["feeder"], date_off=str(r["date_off"]),
+                 time_off=_clean_str(r.get("time_off")), outage_class=_clean_str(r.get("outage_class")),
+                 days_open=r["days_open"], remarks=_clean_str(r.get("remarks"))[:200])
+            for r in (still_open or [])
+        ],
     )
     if region is None:
         rs = region_summary(df_all)

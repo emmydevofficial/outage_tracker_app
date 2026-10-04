@@ -33,7 +33,8 @@ def _records(df):
 
 def build_region(engine, region: str):
     df = D.read_outages(PS, PE)
-    tcn = df[(df["party_responsible"] == "TCN") & (df["region"] == region)].copy()
+    tcn_raw = df[(df["party_responsible"] == "TCN") & (df["region"] == region)].copy()
+    tcn = tcn_raw[~tcn_raw["is_open"]]
     sla_map = D.sla_lookup(D.read_sla())
     tariff_map = D.tariff_lookup(D.read_tariff_rates())
     default_rate = D.read_default_tariff()
@@ -43,7 +44,8 @@ def build_region(engine, region: str):
 
     mtd = month_to_date(PE)
     df_mtd = D.read_outages(mtd.start, mtd.end)
-    tcn_mtd = df_mtd[(df_mtd["party_responsible"] == "TCN") & (df_mtd["region"] == region)]
+    tcn_mtd_raw = df_mtd[(df_mtd["party_responsible"] == "TCN") & (df_mtd["region"] == region)]
+    tcn_mtd = tcn_mtd_raw[~tcn_mtd_raw["is_open"]]
     mtd_compliance = M.sla_compliance(tcn_mtd, sla_map, mtd.days)
     mtd_exc = M.exceedance(tcn_mtd, sla_map, tariff_map, default_rate, mtd.days)
 
@@ -77,7 +79,8 @@ def build_region(engine, region: str):
 
 def build_management(engine):
     df = D.read_outages(PS, PE)
-    tcn = df[df["party_responsible"] == "TCN"].copy()
+    tcn_raw = df[df["party_responsible"] == "TCN"].copy()
+    tcn = tcn_raw[~tcn_raw["is_open"]]
     sla_map = D.sla_lookup(D.read_sla())
     tariff_map = D.tariff_lookup(D.read_tariff_rates())
     default_rate = D.read_default_tariff()
@@ -87,12 +90,15 @@ def build_management(engine):
 
     mtd = month_to_date(PE)
     df_mtd = D.read_outages(mtd.start, mtd.end)
-    tcn_mtd = df_mtd[df_mtd["party_responsible"] == "TCN"]
+    tcn_mtd_raw = df_mtd[df_mtd["party_responsible"] == "TCN"]
+    tcn_mtd = tcn_mtd_raw[~tcn_mtd_raw["is_open"]]
     mtd_compliance = M.sla_compliance(tcn_mtd, sla_map, mtd.days)
     mtd_exc = M.exceedance(tcn_mtd, sla_map, tariff_map, default_rate, mtd.days)
+    still_open = M.still_open_feeders(tcn_raw)
 
     notes = store.list_notes(engine, PS, PE, None)
     facts = M.build_facts(None, "Week 3", PS, PE, tcn, df, compliance, exc, mtd_exc, mtd_compliance,
+                          still_open=still_open.to_dict("records"),
                           previous_issued=None, human_notes=notes)
 
     if api_key:

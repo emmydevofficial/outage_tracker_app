@@ -292,6 +292,18 @@ def build_management_docx(facts: dict, tables: dict, text: dict, signatory: dict
            tables.get("mtd_top_cost_rows", []))
 
     n = 7
+    if facts.get("still_open_feeders"):
+        _heading(doc, f"{n}. TCN Feeders Currently Open (Not Yet Restored)")
+        doc.add_paragraph(
+            "These TCN-attributed outages have no restoration date or time logged at all, so they cannot be "
+            "priced or counted as a finished outage -- kept for the record, not included in any figure above."
+        )
+        _table(doc, ["Region", "Station", "Feeder", "Opened", "Days Open", "Class", "Remarks"],
+               [[r["region"], r["station"], r["feeder"], f"{r['date_off']} {r['time_off']}".strip(),
+                 r["days_open"], r["outage_class"] or "", r["remarks"]]
+                for r in facts["still_open_feeders"]])
+        n += 1
+
     if text.get("key_observations", "").strip():
         _heading(doc, f"{n}. Key Observations")
         _bulleted(doc, text["key_observations"])

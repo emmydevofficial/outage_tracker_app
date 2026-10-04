@@ -63,6 +63,11 @@ def normalize_station(station) -> str:
 def normalize_feeder(feeder) -> str:
     s = str(feeder or "").upper()
     s = re.sub(r"(33\s*KV|FDR|FEEDER)", "", s)
+    # same 0/O corruption as normalize_station(), e.g. tcn_sla_compliance's
+    # "0SSAMALA"/"0B0SI"/"0GIDI" for "OSSAMALA"/"OBOSI"/"OGIDI" -- but a
+    # feeder name can have a real standalone number (e.g. "FDR 10"), so
+    # only a 0 directly touching a letter is corruption, not a real digit.
+    s = re.sub(r"(?<=[A-Z])0|0(?=[A-Z])", "O", s)
     return re.sub(r"[^A-Z0-9]", "", s)
 
 
@@ -83,16 +88,29 @@ def read_outages(period_start: dt.date, period_end: dt.date) -> pd.DataFrame:
     if df.empty:
         return df
 
+    # some rows have party_responsible stored with stray whitespace (e.g.
+    # " TCN" instead of "TCN") -- same real issue, same fix, as
+    # views/reliability_kpi_report.py.
+    df["party_responsible"] = df["party_responsible"].astype(str).str.strip()
+
     df["last_load"] = pd.to_numeric(df["last_load"], errors="coerce")
     df["start_ts"] = pd.to_datetime(df["date_off"].astype(str) + " " + df["time_off"].astype(str), errors="coerce")
     end_ts = pd.to_datetime(df["date_on"].astype(str) + " " + df["time_on"].astype(str), errors="coerce")
-    df["end_ts"] = end_ts.fillna(pd.Timestamp.now())  # still open: counts up to now
+    df["is_open"] = end_ts.isna()  # no restoration date/time logged at all
 
     lo = pd.Timestamp(period_start)
     hi = pd.Timestamp(period_end) + pd.Timedelta(days=1)  # exclusive upper bound (whole last day included)
+    # Still-open rows get no duration/cost here -- matching
+    # views/reliability_kpi_report.py, which only counts outages with a
+    # real restoration date. An outage with nothing logged at all is a
+    # data-entry gap, not a known multi-week outage, and clipping it to
+    # "down for the rest of the period" wildly overstates cost. They stay
+    # in this DataFrame (via is_open) so callers can still list them.
+    df["end_ts"] = end_ts
     df["clipped_start"] = df["start_ts"].clip(lower=lo, upper=hi)
     df["clipped_end"] = df["end_ts"].clip(lower=lo, upper=hi)
     df["duration_hr"] = ((df["clipped_end"] - df["clipped_start"]).dt.total_seconds() / 3600.0).clip(lower=0)
+    df.loc[df["is_open"], "duration_hr"] = 0.0
     df["load_loss_mwh"] = df["duration_hr"] * df["last_load"].fillna(0)
 
     df["disco_norm"] = df.apply(lambda r: normalize_disco(r["disco"], r["station"]), axis=1)

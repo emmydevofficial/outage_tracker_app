@@ -27,6 +27,7 @@ _upload = [
     st.Page("views/upload_feeder_load.py", title="Upload Feeder Load", icon=":material/upload_file:"),
     st.Page("views/upload_line_load.py", title="Upload Line Load", icon=":material/upload_file:"),
     st.Page("views/upload_transformer_load.py", title="Upload Transformer Load", icon=":material/upload_file:"),
+    st.Page("views/outage_quality_check.py", title="Outage Data Quality Check", icon=":material/fact_check:"),
 ]
 _load_analysis = [
     st.Page("views/region_load_analysis.py", title="Region Load Analysis", icon=":material/bar_chart:"),
