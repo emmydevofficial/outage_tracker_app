@@ -86,6 +86,23 @@ def read_outages(period_start: dt.date, period_end: dt.date) -> pd.DataFrame:
     """)
     df = pd.read_sql_query(query, engine, params={"start_date": period_start, "end_date": period_end})
     if df.empty:
+        # Every column downstream code expects, even with zero rows --
+        # without this, a period/scope with no matching outages at all
+        # (a real case on a freshly-deployed server, or just a quiet
+        # period) returns a frame missing is_open/duration_hr/etc. and
+        # every caller that reads those columns crashes with a KeyError.
+        # dtype matters here, not just presence: is_open must be real
+        # bool so `~df["is_open"]` later produces a proper boolean mask --
+        # an empty object-dtype column breaks that inversion silently and
+        # collapses the next filter to zero *columns*, not just zero rows.
+        extra_cols = {
+            "start_ts": "datetime64[ns]", "end_ts": "datetime64[ns]", "is_open": "bool",
+            "clipped_start": "datetime64[ns]", "clipped_end": "datetime64[ns]",
+            "duration_hr": "float64", "load_loss_mwh": "float64",
+            "disco_norm": "object", "station_norm": "object", "feeder_norm": "object",
+        }
+        for c, dtype in extra_cols.items():
+            df[c] = pd.Series(dtype=dtype)
         return df
 
     # some rows have party_responsible stored with stray whitespace (e.g.

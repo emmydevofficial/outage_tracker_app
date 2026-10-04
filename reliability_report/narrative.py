@@ -121,7 +121,7 @@ def rule_based(facts: dict, doc_type: str) -> dict:
                       f"{f['period_label']} ({f['period_start']} to {f['period_end']})."),
             "important_note": (f"Weekly figures cannot be straight-line summed to get the month-to-date total. "
                                 f"The true combined exposure is ₦{f.get('mtd_estimated_cost_ngn', 0):,.2f}."),
-            "cause_note": f"{f.get('top_cause', ('Unspecified', 0))[0]} is the largest share of outages this period.",
+            "cause_note": f"{(f.get('top_cause') or ('Unspecified', 0))[0]} is the largest share of outages this period.",
             "kpi_note": "Each feeder's allowable outage duration is based on its DISCO band (or a 4 hours/day default).",
             "region_exceedance_note": f"{f.get('regions_with_exceedance', 0)} of {f['regions']} regions had at least one feeder over allocation.",
             "top_cost_note": "See the table above for the highest-cost feeder exceedances this period.",
