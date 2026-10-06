@@ -10,7 +10,11 @@ import streamlit as st
 from utils.auth import is_super_admin, current_region
 import pandas as pd
 import numpy as np
-from utils.db import insert_outages, insert_outages_from_csv
+from utils.db import (
+    insert_outages, insert_outages_from_csv,
+    read_outages, read_outages_using_date_off, read_outages_for_report,
+    read_open_outages, read_distinct_party_responsible,
+)
 from utils.activity_log import log_activity
 from utils.file_storage import save_uploaded_file
 from utils.branding import page_header, one_indexed
@@ -214,6 +218,15 @@ if upload is not None:
                 insert_outages_from_csv(tmp_path)
             else:
                 insert_outages(valid_df)
+            # every page that reads the outages table is @st.cache_data(ttl=300) --
+            # without clearing these, newly-uploaded rows don't show up anywhere
+            # else in the app for up to 5 minutes, which looks exactly like a slow
+            # server even though the insert itself (COPY) already completed.
+            read_outages.clear()
+            read_outages_using_date_off.clear()
+            read_outages_for_report.clear()
+            read_open_outages.clear()
+            read_distinct_party_responsible.clear()
             st.success(f"{len(valid_df)} outage record(s) successfully inserted into database")
             upload_region = None if is_super_admin() else current_region()
             save_uploaded_file(upload, "Upload Outages", upload_region)

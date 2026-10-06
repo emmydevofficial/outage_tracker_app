@@ -28,6 +28,13 @@ st.markdown(
 
 st.sidebar.header("Quick actions")
 if st.sidebar.button("Refresh data cache"):
+    # st.rerun() alone re-executes the page but does NOT clear
+    # @st.cache_data -- a cached read would just return the same stale
+    # result again. st.cache_data.clear() clears every @st.cache_data
+    # cache app-wide (every upload page that matters already clears its
+    # own specific cache right after inserting; this button is the
+    # manual, app-wide equivalent for anyone who wants to force it).
+    st.cache_data.clear()
     st.rerun()
 
 # credits_section()
