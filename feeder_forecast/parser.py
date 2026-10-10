@@ -240,6 +240,7 @@ def _clean_number(v, row: int, col: int, field_name: str, issues: list[dict]) ->
 @dataclass
 class AliasMaps:
     daily_workbook: dict[tuple[str, str], int]
+    outages: dict[tuple[str, str], int]
     any_source: dict[tuple[str, str], int]
 
 
@@ -252,12 +253,14 @@ def load_alias_maps(engine) -> AliasMaps:
     this fix, likely worse for a bigger region or several files at once."""
     with engine.connect() as con:
         rows = con.execute(text("SELECT source, station_norm, name_norm, feeder_id FROM feeder_alias")).fetchall()
-    daily_workbook, any_source = {}, {}
+    daily_workbook, outages, any_source = {}, {}, {}
     for source, sn, fn, feeder_id in rows:
         any_source.setdefault((sn, fn), feeder_id)
         if source == "daily_workbook":
             daily_workbook[(sn, fn)] = feeder_id
-    return AliasMaps(daily_workbook=daily_workbook, any_source=any_source)
+        elif source == "outages":
+            outages[(sn, fn)] = feeder_id
+    return AliasMaps(daily_workbook=daily_workbook, outages=outages, any_source=any_source)
 
 
 def resolve_feeder_cached(maps: AliasMaps, station: str, feeder: str) -> int | None:
@@ -266,6 +269,19 @@ def resolve_feeder_cached(maps: AliasMaps, station: str, feeder: str) -> int | N
     resolve_feeder(), looked up in the pre-loaded maps instead of the DB."""
     key = (normalize_station(station), normalize_feeder(feeder))
     return maps.daily_workbook.get(key) or maps.any_source.get(key)
+
+
+def resolve_outage_feeder_cached(maps: AliasMaps, station: str, feeder: str) -> int | None:
+    """Same idea as resolve_feeder_cached() but source='outages' preferred
+    first -- used to resolve an outages row's (station, feeder_33kv) to a
+    feeder_forecast feeder_id for the forecast-based KPI/energy pages, per
+    spec section 4 ("resolve outage feeders to feeder_id at query time
+    through feeder_alias with source 'outages'"). A miss here is not an
+    error -- the caller treats it as an unmatched feeder (gap reason
+    "feeder not matched") until an admin links/creates it on the Feeder
+    Registry page's Unmatched names tab, same review flow as workbook rows."""
+    key = (normalize_station(station), normalize_feeder(feeder))
+    return maps.outages.get(key) or maps.any_source.get(key)
 
 
 def resolve_feeder(engine, station: str, feeder: str) -> int | None:

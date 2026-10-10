@@ -23,6 +23,7 @@ SCHEMA_FILE = Path(__file__).resolve().parent.parent / "feeder_forecast" / "sql"
 NEW_TABLES = [
     "feeder", "feeder_alias", "daily_workbook_upload", "daily_workbook_issues",
     "feeder_upload_staging", "feeder_daily", "feeder_hourly_forecast", "feeder_meter_reading",
+    "forecast_gap_approval",
 ]
 
 

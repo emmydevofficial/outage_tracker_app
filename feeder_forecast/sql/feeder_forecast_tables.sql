@@ -173,3 +173,21 @@ CREATE TABLE IF NOT EXISTS feeder_meter_reading (
     PRIMARY KEY (feeder_id, reading_at)
 );
 CREATE INDEX IF NOT EXISTS feeder_meter_reading_date ON feeder_meter_reading (reading_date);
+
+-- ---------------------------------------------------------------------
+-- Gap-fill approvals for the Reliability KPI (Forecast Loss) page --
+-- records exactly what a person approved (date range, filters, the gap
+-- list) so a last_load-filled total is always traceable to who signed
+-- off on it and when. Nothing is ever filled without a row here.
+-- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS forecast_gap_approval (
+    approval_id  BIGSERIAL PRIMARY KEY,
+    approved_by  TEXT,
+    approved_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    date_from    DATE NOT NULL,
+    date_to      DATE NOT NULL,
+    filters      JSONB,
+    gap_list     JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS forecast_gap_approval_dates ON forecast_gap_approval (date_from, date_to);

@@ -35,10 +35,12 @@ _load_analysis = [
     st.Page("views/station_load_analysis.py", title="Station Load Analysis", icon=":material/bar_chart:"),
     st.Page("views/feeder_load_analysis.py", title="Feeder Load Analysis", icon=":material/bar_chart:"),
     st.Page("views/transformer_load.py", title="Transformer Load", icon=":material/bar_chart:"),
+    st.Page("views/feeder_daily_energy.py", title="Feeder Daily Energy & Value", icon=":material/bar_chart:"),
 ]
 _outage_reliability = [
     st.Page("views/outage_analytics.py", title="Outage Analytics", icon=":material/bolt:"),
     st.Page("views/reliability_kpi_report.py", title="Reliability KPI Report", icon=":material/monitoring:"),
+    st.Page("views/reliability_kpi_report_v2.py", title="Reliability KPI (Forecast Loss)", icon=":material/insights:"),
     st.Page("views/regional_dashboard.py", title="Regional Dashboard", icon=":material/dashboard:"),
 ]
 _reports = [
