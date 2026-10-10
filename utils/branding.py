@@ -397,8 +397,8 @@ CREDITS = [
     ("Supervised By", ["Engr. Kelechi Elohoanya", "Engr. Tayo Ogunmola"]),
     ("Developed By", [
         ("Engr. Matthew, Adedeji F.", "System Architect"),
-        ("Engr. Oluwaloni Emmanuel", "Full Stack Software Engineer"),
         ("Engr. Ibrahim Usman", "UI/UX Engineer"),
+        ("Engr. Oluwaloni Emmanuel", "Full Stack Software Engineer"),
         ("Engr. Kingsley Okpala", "Technical Support"),
     ]),
 ]
