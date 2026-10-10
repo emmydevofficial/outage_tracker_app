@@ -393,14 +393,14 @@ def page_header(title: str, subtitle: str = "33kV Feeder Network · Load · Outa
 
 CREDITS = [
     ("Approved By", ["Engr. Godwin A. Aguiyi (GM)"]),
-    ("Verified By", ["Engr. Gabriel Onuche", "Engr. Adejayan Adesanmi"]),
-    ("Reviewed By", ["Engr. Kelechi Elohoanya", "Engr. Tayo Ogunmola"]),
-    ("Supervised By", [("Engr. Matthew, Adedeji F.", "System Architect")]),
+    ("Reviewed By", ["Engr. Gabriel Onuche", "Engr. Adejayan Adesanmi"]),
+    ("Supervised By", ["Engr. Kelechi Elohoanya", "Engr. Tayo Ogunmola"]),
     ("Developed By", [
+        ("Engr. Matthew, Adedeji F.", "System Architect"),
         ("Engr. Oluwaloni Emmanuel", "Full Stack Software Engineer"),
         ("Engr. Ibrahim Usman", "UI/UX Engineer"),
+        ("Engr. Kingsley Okpala", "Technical Support"),
     ]),
-    ("Support", ["Engr. Kingsley Okpala"]),
 ]
 
 
