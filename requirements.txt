@@ -19,3 +19,5 @@ requests
 jinja2
 anthropic
 playwright
+rapidfuzz
+pytest

@@ -153,3 +153,7 @@ poetry.lock
 # Pipenv
 # ==============================
 Pipfile.lock
+# ==============================
+# Private Claude prompts and working notes (never publish)
+# ==============================
+Claude outputs/

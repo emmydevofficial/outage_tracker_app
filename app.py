@@ -28,6 +28,7 @@ _upload = [
     st.Page("views/upload_line_load.py", title="Upload Line Load", icon=":material/upload_file:"),
     st.Page("views/upload_transformer_load.py", title="Upload Transformer Load", icon=":material/upload_file:"),
     st.Page("views/outage_quality_check.py", title="Outage Data Quality Check", icon=":material/fact_check:"),
+    st.Page("views/upload_feeder_forecast.py", title="Upload Daily Feeder Workbook", icon=":material/upload_file:"),
 ]
 _load_analysis = [
     st.Page("views/region_load_analysis.py", title="Region Load Analysis", icon=":material/bar_chart:"),
@@ -58,6 +59,7 @@ _admin = [
     st.Page("views/user_management.py", title="User Management", icon=":material/group:"),
     st.Page("views/activity_log.py", title="Activity Log", icon=":material/history:"),
     st.Page("views/tariff_settings.py", title="Tariff Settings", icon=":material/payments:"),
+    st.Page("views/feeder_registry.py", title="Feeder Registry", icon=":material/dns:"),
 ]
 _info = [
     st.Page("views/about.py", title="About", icon=":material/info:"),

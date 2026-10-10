@@ -360,8 +360,10 @@ def inject_css():
         font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
         text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px;
     }}
-    .credit-names {{
-        font-size: 1.05rem; font-weight: 700; color: var(--text-primary); line-height: 1.5;
+    .credit-names {{ display: flex; flex-direction: column; gap: 7px; }}
+    .credit-name {{ font-size: 1.05rem; font-weight: 700; color: var(--text-primary); line-height: 1.3; }}
+    .credit-title {{
+        font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); line-height: 1.3; margin-top: 1px;
     }}
     </style>""", unsafe_allow_html=True)
 
@@ -393,21 +395,31 @@ CREDITS = [
     ("Approved By", ["Engr. Godwin A. Aguiyi (GM)"]),
     ("Verified By", ["Engr. Gabriel Onuche", "Engr. Adejayan Adesanmi"]),
     ("Reviewed By", ["Engr. Kelechi Elohoanya", "Engr. Tayo Ogunmola"]),
-    ("Supervised By", ["Engr. Matthew, Adedeji F."]),
-    ("Developed By", ["Engr. Ibrahim Usman", "Engr. Kingsley Okpala", "Engr. Oluwaloni Emmanuel"]),
+    ("Supervised By", [("Engr. Matthew, Adedeji F.", "System Architect")]),
+    ("Developed By", [
+        ("Engr. Oluwaloni Emmanuel", "Full Stack Software Engineer"),
+        ("Engr. Ibrahim Usman", "UI/UX Engineer"),
+    ]),
+    ("Support", ["Engr. Kingsley Okpala"]),
 ]
 
 
 def credits_section():
-    """Project sign-off / team card -- who approved, reviewed, and built this app."""
+    """Project sign-off / team card -- who approved, reviewed, and built this app.
+    Each name in CREDITS can be a plain string, or a (name, title) tuple when
+    that person's title should show as a muted line underneath their name."""
     rows_html = ""
     for role, names in CREDITS:
         row_class = "credit-row credit-approved" if role == "Approved By" else "credit-row"
-        names_html = "<br>".join(names)
+        entries_html = ""
+        for entry in names:
+            name, title = entry if isinstance(entry, tuple) else (entry, None)
+            title_html = f'<div class="credit-title">{title}</div>' if title else ""
+            entries_html += f'<div class="credit-person"><div class="credit-name">{name}</div>{title_html}</div>'
         rows_html += (
             f'<div class="{row_class}">'
             f'<div class="credit-role">{role}</div>'
-            f'<div class="credit-names">{names_html}</div>'
+            f'<div class="credit-names">{entries_html}</div>'
             f'</div>'
         )
     st.markdown(f"""
